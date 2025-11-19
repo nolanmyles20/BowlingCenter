@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Lane</title>
+  <link rel="stylesheet" href="css/styles.css">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body>
+  <header class="top-bar">
+    <h1 id="lane-title">Lane</h1>
+    <nav>
+      <a href="index.html">Front Desk</a>
+      <a href="bowlers.html">Bowlers</a>
+      <a href="teams.html">Teams</a>
+    </nav>
+  </header>
+
+  <main>
+    <section id="lane-info" class="panel"></section>
+
+    <section class="lane-controls panel">
+      <h3>Enter Roll</h3>
+      <div id="pin-buttons" class="pins-buttons"></div>
+    </section>
+
+    <section class="lane-score panel">
+      <h3>Scoreboard</h3>
+      <div id="frames"></div>
+      <h3>Total: <span id="total-score">0</span></h3>
+    </section>
+  </main>
+
+  <script type="module" src="js/lane.js"></script>
+</body>
+</html>

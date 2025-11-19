@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Bowlers</title>
+  <link rel="stylesheet" href="css/styles.css">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body>
+  <header class="top-bar">
+    <h1>Bowlers</h1>
+    <nav>
+      <a href="index.html">Front Desk</a>
+      <a href="bowlers.html">Bowlers</a>
+      <a href="teams.html">Teams</a>
+    </nav>
+  </header>
+
+  <main>
+    <section class="panel">
+      <h2 id="bowler-form-title">Add Bowler</h2>
+      <form id="bowler-form">
+        <input type="hidden" id="bowler-id">
+
+        <div class="form-row">
+          <label for="bowler-name">Name</label>
+          <input type="text" id="bowler-name" required>
+        </div>
+
+        <div class="form-row">
+          <label for="bowler-gender">Gender</label>
+          <select id="bowler-gender">
+            <option value="">-- Not Set --</option>
+            <option value="M">Male</option>
+            <option value="F">Female</option>
+            <option value="X">Other / Prefer not to say</option>
+          </select>
+        </div>
+
+        <div class="form-row">
+          <label for="bowler-handicap">Handicap</label>
+          <input type="number" id="bowler-handicap" value="0" min="0" max="300" step="1">
+        </div>
+
+        <div class="form-row">
+          <label for="bowler-league">League</label>
+          <select id="bowler-league">
+            <!-- filled by JS -->
+          </select>
+        </div>
+
+        <div class="form-actions">
+          <button type="submit" class="btn-primary" id="btn-save-bowler">Save Bowler</button>
+          <button type="button" class="btn-secondary" id="btn-cancel-edit" style="display:none;">Cancel Edit</button>
+        </div>
+      </form>
+    </section>
+
+    <section class="panel">
+      <h2>All Bowlers</h2>
+      <table class="bowler-table">
+        <thead>
+          <tr>
+            <th>Name</th>
+            <th>Gender</th>
+            <th>Handicap</th>
+            <th>League</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody id="bowler-table-body">
+          <!-- filled by JS -->
+        </tbody>
+      </table>
+    </section>
+  </main>
+
+  <script type="module" src="js/bowlers.js"></script>
+</body>
+</html>

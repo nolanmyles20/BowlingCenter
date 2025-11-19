@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Teams</title>
+  <link rel="stylesheet" href="css/styles.css">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body>
+  <header class="top-bar">
+    <h1>Teams</h1>
+    <nav>
+      <a href="index.html">Front Desk</a>
+      <a href="bowlers.html">Bowlers</a>
+      <a href="teams.html">Teams</a>
+    </nav>
+  </header>
+
+  <main>
+    <section class="panel">
+      <h2 id="team-form-title">Add Team</h2>
+      <form id="team-form">
+        <input type="hidden" id="team-id">
+
+        <div class="form-row">
+          <label for="team-name">Team Name</label>
+          <input type="text" id="team-name" required>
+        </div>
+
+        <div class="form-row">
+          <label for="team-league">League</label>
+          <select id="team-league">
+            <!-- filled by JS -->
+          </select>
+        </div>
+
+        <div class="form-actions">
+          <button type="submit" class="btn-primary" id="btn-team-save">Save Team</button>
+          <button type="button" class="btn-secondary" id="btn-team-cancel" style="display:none;">Cancel Edit</button>
+        </div>
+      </form>
+    </section>
+
+    <section class="panel">
+      <h2>Teams & Rosters</h2>
+      <table class="bowler-table">
+        <thead>
+          <tr>
+            <th>Team</th>
+            <th>League</th>
+            <th>Roster</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody id="teams-table-body">
+          <!-- filled by JS -->
+        </tbody>
+      </table>
+    </section>
+
+    <section id="roster-editor" class="panel" style="display:none;">
+      <h2 id="roster-title">Edit Roster</h2>
+      <p><strong id="roster-team-name"></strong></p>
+      <div class="form-row">
+        <label for="roster-bowlers">Bowlers (Ctrl/Cmd-click to multi-select)</label>
+        <select id="roster-bowlers" multiple size="8">
+          <!-- filled by JS -->
+        </select>
+      </div>
+      <div class="form-actions">
+        <button type="button" class="btn-primary" id="btn-roster-save">Save Roster</button>
+        <button type="button" class="btn-secondary" id="btn-roster-cancel">Cancel</button>
+      </div>
+    </section>
+  </main>
+
+  <script type="module" src="js/teams.js"></script>
+</body>
+</html>
