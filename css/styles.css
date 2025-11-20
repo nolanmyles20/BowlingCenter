@@ -1,5 +1,10 @@
 /* GLOBAL */
 
+html,
+body {
+  height: 100%;
+}
+
 body {
   font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
   margin: 0;
@@ -148,11 +153,18 @@ main {
 
 .lane-body {
   background: radial-gradient(circle at top, #0f172a 0, #020617 55%);
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
 }
 
-.lane-main {
-  max-width: 1080px;
-  margin: 0 auto;
+/* override for lane main to make it flex-full-height */
+main.lane-main {
+  flex: 1;                         /* fill remaining space under header */
+  width: 100%;
+  max-width: none;                  /* no 1080px cap – full width */
+  margin: 0;
+  padding: 0.5rem 1rem 0.75rem;     /* tighter padding */
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
@@ -164,7 +176,14 @@ main {
   align-items: center;
 }
 
-.lane-controls-panel,
+.lane-controls-panel {
+  width: 100%;
+  flex: 1;                       /* this panel grows in height */
+  display: flex;
+  flex-direction: column;
+  min-height: 0;                 /* allow scoreboard to shrink if needed */
+}
+
 .lane-pin-panel {
   width: 100%;
 }
@@ -192,11 +211,13 @@ main {
 
 .scoreboard {
   width: 100%;
+  flex: 1;                       /* fill the vertical space in controls panel */
   border-radius: 6px;
   background: #020617;
   border: 2px solid var(--color-score-border, #991b1b);
   box-shadow: 0 0 20px rgba(0,0,0,0.6);
-  display: block;
+  display: flex;
+  flex-direction: column;
 }
 
 .scoreboard-row {
@@ -390,8 +411,8 @@ main {
 /* RESPONSIVE */
 
 @media (max-width: 800px) {
-  .lane-main {
-    padding: 0 0.25rem;
+  main.lane-main {
+    padding: 0.5rem 0.25rem 0.75rem;
   }
 
   .scoreboard .label-cell {
@@ -411,6 +432,7 @@ main {
   text-decoration: line-through;
   color: #9ca3af;
 }
+
 .next-game-banner {
   margin-bottom: 0.4rem;
   padding: 0.35rem 0.6rem;
