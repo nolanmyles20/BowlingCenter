@@ -228,47 +228,57 @@ main {
   color: #facc15;
 }
 
-/* ---------------- SCOREBOARD (new full version) ---------------- */
+/* ---------------- SCOREBOARD ---------------- */
 
 .scoreboard {
   width: 100%;
   border-radius: 6px;
-  overflow: hidden;
   background: #020617;
   border: 2px solid #991b1b;
   box-shadow: 0 0 20px rgba(0,0,0,0.6);
+  overflow-x: auto;            /* allow horizontal scroll on small screens */
 }
 
 .scoreboard-row {
-  display: grid;
-  grid-auto-flow: column;
-  grid-auto-columns: minmax(40px, 1fr);
-}
-
-.scoreboard-header {
-  background: #111827;
+  display: flex;               /* flex so we can control column widths */
 }
 
 .scoreboard-cell {
-  padding: 0.35rem 0.4rem;
+  padding: 4px 6px;
   border-right: 1px solid #1f2937;
   display: flex;
   flex-direction: column;
   justify-content: center;
   align-items: center;
   min-height: 40px;
+  box-sizing: border-box;
 }
 
 .scoreboard-cell:last-child {
   border-right: none;
 }
 
-.label-cell {
-  min-width: 80px;
+/* left label / bowler name column */
+.scoreboard .label-cell {
+  flex: 0 0 130px;             /* name column width – tweak as needed */
+  max-width: 130px;
   font-weight: 600;
   font-size: 0.85rem;
   background: #020617;
   color: #e5e7eb;
+}
+
+/* frame number cells and per-frame cells */
+.scoreboard .frame-number-cell,
+.scoreboard .player-frame-cell {
+  flex: 1 0 40px;              /* all frame columns same width */
+  min-width: 40px;
+  text-align: center;
+}
+
+/* header row */
+.scoreboard-header {
+  background: #111827;
 }
 
 .frame-number-cell {
@@ -322,6 +332,28 @@ main {
   margin-top: 0.05rem;
   font-size: 0.75rem;
   color: #facc15;
+}
+
+/* highlight current bowler */
+
+.player-row.current {
+  outline: 2px solid #facc15;
+  outline-offset: -2px;
+  animation: currentPulse 1s infinite alternate;
+}
+
+.player-name.absent {
+  text-decoration: line-through;
+  color: #9ca3af;
+}
+
+@keyframes currentPulse {
+  from {
+    background-color: #111827;
+  }
+  to {
+    background-color: #1f2937;
+  }
 }
 
 /* PINS BUTTONS */
@@ -396,52 +428,4 @@ main {
   .lane-pin-panel {
     grid-column: 1 / 2;
   }
-}
-.player-row.current {
-  outline: 2px solid #facc15;
-  outline-offset: -2px;
-  animation: currentPulse 1s infinite alternate;
-}
-
-.player-name.absent {
-  text-decoration: line-through;
-  color: #9ca3af;
-}
-
-@keyframes currentPulse {
-  from {
-    background-color: #111827;
-  }
-  to {
-    background-color: #1f2937;
-  }
-}
-/* --- Scoreboard column layout fix --- */
-.scoreboard {
-  overflow-x: auto;           /* just in case on small screens */
-}
-
-.scoreboard-row {
-  display: flex;
-}
-
-/* left label / bowler name column */
-.scoreboard .label-cell {
-  flex: 0 0 120px;            /* fixed width – adjust 120px if you want */
-  max-width: 120px;
-  box-sizing: border-box;
-}
-
-/* frame number cells and per-frame cells */
-.scoreboard .frame-number-cell,
-.scoreboard .player-frame-cell {
-  flex: 1 0 40px;             /* same width for all frame columns */
-  min-width: 40px;
-  text-align: center;
-  box-sizing: border-box;
-}
-
-/* keep text from touching the borders */
-.scoreboard-cell {
-  padding: 4px 6px;
 }
