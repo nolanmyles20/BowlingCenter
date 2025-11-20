@@ -10,9 +10,9 @@ import {
 } from './state.js';
 import { scoreGame } from './scoring.js';
 
-const VIEW_MODE_KEY_PREFIX = 'lane_view_mode_'; // per lane: 'full' or 'compact'
+const VIEW_MODE_KEY_PREFIX = 'lane_view_mode_'; // per lane: 'full' or 'compact';
 
-// theme storage
+// Theme storage
 const THEME_KEY = 'bowling_theme_v1';
 const DEFAULT_THEME = {
   accent: '#facc15',
@@ -45,7 +45,9 @@ function saveTheme(theme) {
   localStorage.setItem(THEME_KEY, JSON.stringify(theme));
 }
 
-/* --------------------------------------------------------- */
+/* ---------------------------------------------------------
+   Lane + view helpers
+--------------------------------------------------------- */
 
 function getLaneIdFromQuery() {
   const params = new URLSearchParams(window.location.search);
@@ -64,9 +66,10 @@ function setViewMode(laneId, mode) {
 }
 
 /* ---------------------------------------------------------
-   FRAME / ROLL HELPERS
+   Frame / roll helpers
 --------------------------------------------------------- */
 
+// Count completed frames (1–9) from rolls array
 function countCompletedFrames9(rolls) {
   let frame = 0;
   let i = 0;
@@ -84,12 +87,14 @@ function countCompletedFrames9(rolls) {
   return frame;
 }
 
+// Did last roll complete a frame (1–9)?
 function didLastRollCompleteFrame(rollsBefore, rollsAfter) {
   const beforeFrames = countCompletedFrames9(rollsBefore);
   const afterFrames = countCompletedFrames9(rollsAfter);
   return afterFrames > beforeFrames;
 }
 
+// Determine if we are on the 2nd ball of frames 1–9 and how many pins so far
 function getSecondBallContextFrames1to9(rolls) {
   let frame = 0;
   let i = 0;
@@ -116,6 +121,7 @@ function getSecondBallContextFrames1to9(rolls) {
   return { isSecondBall: false };
 }
 
+// Guess current frame index (1–10) based on current bowler/game
 function getCurrentFrameForLane(lane) {
   const players = lane.players || [];
   const idx = lane.currentPlayerIndex || 0;
@@ -130,11 +136,12 @@ function getCurrentFrameForLane(lane) {
 }
 
 /* ---------------------------------------------------------
-   PIN BUTTONS
+   Pin buttons
 --------------------------------------------------------- */
 
 function renderPinButtons(lane) {
   const container = document.getElementById('pin-buttons');
+  if (!container) return;
   container.innerHTML = '';
 
   const players = lane.players || [];
@@ -162,7 +169,7 @@ function renderPinButtons(lane) {
 }
 
 /* ---------------------------------------------------------
-   HANDLE ROLL
+   Handle roll input
 --------------------------------------------------------- */
 
 function handleRoll(laneId, pins) {
@@ -181,6 +188,7 @@ function handleRoll(laneId, pins) {
 
   let effectivePins = pins;
 
+  // 9-pin no-tap logic: first ball 9 counts as strike
   if (lane.mode === '9pin') {
     const ctx = getSecondBallContextFrames1to9(rollsBefore);
     const isFirstBallOfFrame = !ctx.isSecondBall;
@@ -206,7 +214,7 @@ function handleRoll(laneId, pins) {
 }
 
 /* ---------------------------------------------------------
-   SCORING GRID
+   Scoring grid helpers
 --------------------------------------------------------- */
 
 function buildFullFrames(frames) {
@@ -232,6 +240,7 @@ function buildFullFrames(frames) {
   return full;
 }
 
+// Return [firstSymbol, secondSymbol] for frame cells
 function formatFrameRolls(frameIndex, frame) {
   const rolls = frame.rolls || [];
 
@@ -250,14 +259,21 @@ function formatFrameRolls(frameIndex, frame) {
     return [firstVal, secondVal];
   }
 
+  // 10th frame can have 3 rolls; compress second + third into one slot
   const symbols = rolls.map((r, i) => {
     if (r === 10) return 'X';
     if (i > 0 && (rolls[i - 1] ?? 0) + r === 10) return '/';
     return r === 0 ? '-' : (r ?? '');
   });
 
-  return [symbols[0] ?? '', (symbols[1] ?? '') + (symbols[2] ? ' ' + symbols[2] : '')];
+  const first = symbols[0] ?? '';
+  const second = [symbols[1], symbols[2]].filter(Boolean).join(' ');
+  return [first, second];
 }
+
+/* ---------------------------------------------------------
+   Render scoreboard
+--------------------------------------------------------- */
 
 function renderScore(laneId) {
   const lane = getLane(laneId);
@@ -265,11 +281,13 @@ function renderScore(laneId) {
   const gIndex = Math.max(0, Math.min(2, (lane.currentGame || 1) - 1));
 
   const scoreboard = document.getElementById('scoreboard');
+  if (!scoreboard) return;
   scoreboard.innerHTML = '';
 
   const playersSrc = lane.players || [];
   const players = [];
 
+  // Normalize 4 rows
   for (let i = 0; i < 4; i++) {
     if (i < playersSrc.length) {
       const src = playersSrc[i];
@@ -315,6 +333,7 @@ function renderScore(laneId) {
   const headerFrames = players[0].fullFrames;
   const visibleFramesHeader = headerFrames.slice(startFrame - 1, endFrame);
 
+  // Header row
   const headerRow = document.createElement('div');
   headerRow.className = 'scoreboard-row scoreboard-header';
 
@@ -337,6 +356,7 @@ function renderScore(laneId) {
 
   scoreboard.appendChild(headerRow);
 
+  // Player rows
   players.forEach((p) => {
     const row = document.createElement('div');
     row.className = 'scoreboard-row player-row';
@@ -364,13 +384,15 @@ function renderScore(laneId) {
       const cell = document.createElement('div');
       cell.className = 'scoreboard-cell player-frame-cell';
 
-      const [top, bottom] = formatFrameRolls(frame.frame - 1, frame);
-      const running = frame.running_total;
+      const [firstSymbol, secondSymbol] = formatFrameRolls(frame.frame - 1, frame);
+      const frameScore = frame.running_total;
 
       cell.innerHTML = `
-        <div class="rolls-top">${top}</div>
-        <div class="rolls-bottom">${bottom}</div>
-        <div class="frame-running">${running != null ? running : ''}</div>
+        <div class="frame-score">${frameScore != null ? frameScore : ''}</div>
+        <div class="rolls-row">
+          <span class="roll roll1">${firstSymbol}</span>
+          <span class="roll roll2">${secondSymbol}</span>
+        </div>
       `;
 
       row.appendChild(cell);
@@ -383,15 +405,18 @@ function renderScore(laneId) {
     const totalCell = document.createElement('div');
     totalCell.className = 'scoreboard-cell player-frame-cell';
     totalCell.innerHTML = `
-      <div class="rolls-top">${totalWithHcp}</div>
-      <div class="rolls-bottom">Scr ${scratchTotal}</div>
+      <div class="frame-score">${totalWithHcp}</div>
+      <div class="rolls-row">
+        <span class="roll roll1">Scr ${scratchTotal}</span>
+        <span class="roll roll2">Hcp ${hcp}</span>
+      </div>
     `;
     row.appendChild(totalCell);
 
     scoreboard.appendChild(row);
   });
 
-  // TEAM ROW (current game)
+  // TEAM ROW
   const teamRow = document.createElement('div');
   teamRow.className = 'scoreboard-row player-row';
 
@@ -418,8 +443,10 @@ function renderScore(laneId) {
     const cell = document.createElement('div');
     cell.className = 'scoreboard-cell player-frame-cell';
     cell.innerHTML = `
-      <div class="rolls-top">${teamRunning || ''}</div>
-      <div class="rolls-bottom">&nbsp;</div>
+      <div class="frame-score">${teamRunning || ''}</div>
+      <div class="rolls-row">
+        <span class="roll">&nbsp;</span>
+      </div>
     `;
     teamRow.appendChild(cell);
   }
@@ -436,27 +463,27 @@ function renderScore(laneId) {
   const teamTotalCell = document.createElement('div');
   teamTotalCell.className = 'scoreboard-cell player-frame-cell';
   teamTotalCell.innerHTML = `
-    <div class="rolls-top">${teamTotalWithHcp}</div>
-    <div class="rolls-bottom">Scr ${teamScratchTotal} Hcp ${teamHcpTotal}</div>
+    <div class="frame-score">${teamTotalWithHcp}</div>
+    <div class="rolls-row">
+      <span class="roll roll1">Scr ${teamScratchTotal}</span>
+      <span class="roll roll2">Hcp ${teamHcpTotal}</span>
+    </div>
   `;
   teamRow.appendChild(teamTotalCell);
 
   scoreboard.appendChild(teamRow);
 
-  const totalEl = document.getElementById('total-score');
-  if (totalEl) {
-    totalEl.textContent = teamScratchTotal;
-  }
-
   const toggleBtn = document.getElementById('view-toggle');
-  toggleBtn.textContent =
-    viewMode === 'full' ? 'Show Last 4 Frames' : 'Show All 10 Frames';
+  if (toggleBtn) {
+    toggleBtn.textContent =
+      viewMode === 'full' ? 'Show Last 4 Frames' : 'Show All 10 Frames';
+  }
 
   renderSeriesRecap(laneId);
 }
 
 /* ---------------------------------------------------------
-   SERIES RECAP (3 GAMES)
+   Series recap (3 games)
 --------------------------------------------------------- */
 
 function renderSeriesRecap(laneId) {
@@ -545,7 +572,7 @@ function renderSeriesRecap(laneId) {
 }
 
 /* ---------------------------------------------------------
-   LANE INFO HEADER
+   Lane header info
 --------------------------------------------------------- */
 
 function renderLaneInfo(laneId) {
@@ -554,7 +581,11 @@ function renderLaneInfo(laneId) {
   const team = lane.teamId ? state.teams[String(lane.teamId)] : null;
 
   const info = document.getElementById('lane-info');
-  document.getElementById('lane-title').textContent = `Lane ${laneId}`;
+  const title = document.getElementById('lane-title');
+
+  if (title) title.textContent = `Lane ${laneId}`;
+
+  if (!info) return;
 
   const leagueText = lane.league || 'None';
   const modeText = lane.mode === '9pin' ? '9-Pin No-Tap' : 'Standard';
@@ -562,23 +593,37 @@ function renderLaneInfo(laneId) {
     team ? `${team.name} (${team.league || 'No league'})` : 'None';
 
   info.innerHTML = `
-    <div class="lane-info-line"><strong>Status:</strong> ${lane.active ? 'Active' : 'Inactive'}</div>
-    <div class="lane-info-line"><strong>League:</strong> ${leagueText}</div>
-    <div class="lane-info-line"><strong>Mode:</strong> ${modeText}</div>
-    <div class="lane-info-line"><strong>Team:</strong> ${teamText}</div>
+    <div class="lane-info-line">
+      <span class="lane-info-label">Status:</span>
+      <span class="lane-info-value">${lane.active ? 'Active' : 'Inactive'}</span>
+    </div>
+    <div class="lane-info-line">
+      <span class="lane-info-label">League:</span>
+      <span class="lane-info-value">${leagueText}</span>
+    </div>
+    <div class="lane-info-line">
+      <span class="lane-info-label">Mode:</span>
+      <span class="lane-info-value">${modeText}</span>
+    </div>
+    <div class="lane-info-line">
+      <span class="lane-info-label">Team:</span>
+      <span class="lane-info-value">${teamText}</span>
+    </div>
   `;
 }
 
 /* ---------------------------------------------------------
-   MENU (ABSENT, SKIP, SCORE CORRECTION, SETTINGS)
+   Lane menu actions
 --------------------------------------------------------- */
 
 function openMenu() {
-  document.getElementById('lane-menu-overlay').classList.remove('hidden');
+  const overlay = document.getElementById('lane-menu-overlay');
+  if (overlay) overlay.classList.remove('hidden');
 }
 
 function closeMenu() {
-  document.getElementById('lane-menu-overlay').classList.add('hidden');
+  const overlay = document.getElementById('lane-menu-overlay');
+  if (overlay) overlay.classList.add('hidden');
 }
 
 function handleMarkAbsent(laneId) {
@@ -611,20 +656,19 @@ function handleScoreCorrection(laneId) {
     return;
   }
 
-  const rollNum = prompt(`Enter roll number to change (1–${rolls.length})`);
-  if (!rollNum) return;
+  const rollNumStr = prompt(`Enter roll number to change (1–${rolls.length})`);
+  if (!rollNumStr) return;
 
-  const index = Number(rollNum);
-  if (isNaN(index) || index < 1 || index > rolls.length) {
+  const index = Number(rollNumStr);
+  if (Number.isNaN(index) || index < 1 || index > rolls.length) {
     alert('Invalid roll number');
     return;
   }
 
-  const newVal = prompt(`Enter new pin count (0–10)`);
+  const newVal = prompt('Enter new pin count (0–10)');
   if (newVal === null) return;
-
   const pins = Number(newVal);
-  if (isNaN(pins) || pins < 0 || pins > 10) {
+  if (Number.isNaN(pins) || pins < 0 || pins > 10) {
     alert('Invalid pin count');
     return;
   }
@@ -635,36 +679,52 @@ function handleScoreCorrection(laneId) {
   renderPinButtons(getLane(laneId));
 }
 
-/* SETTINGS MODAL */
+/* ---------------------------------------------------------
+   Settings modal
+--------------------------------------------------------- */
 
 function openSettingsModal() {
   closeMenu();
   const theme = loadTheme();
-  (document.getElementById('theme-accent') || {}).value = theme.accent;
-  (document.getElementById('theme-row-odd') || {}).value = theme.rowOdd;
-  (document.getElementById('theme-row-even') || {}).value = theme.rowEven;
-  (document.getElementById('theme-border') || {}).value = theme.border;
-  document.getElementById('settings-overlay').classList.remove('hidden');
+  const accent = document.getElementById('theme-accent');
+  const rowOdd = document.getElementById('theme-row-odd');
+  const rowEven = document.getElementById('theme-row-even');
+  const border = document.getElementById('theme-border');
+
+  if (accent) accent.value = theme.accent;
+  if (rowOdd) rowOdd.value = theme.rowOdd;
+  if (rowEven) rowEven.value = theme.rowEven;
+  if (border) border.value = theme.border;
+
+  const overlay = document.getElementById('settings-overlay');
+  if (overlay) overlay.classList.remove('hidden');
 }
 
 function closeSettingsModal() {
-  document.getElementById('settings-overlay').classList.add('hidden');
+  const overlay = document.getElementById('settings-overlay');
+  if (overlay) overlay.classList.add('hidden');
 }
 
 function saveSettingsFromForm() {
+  const accent = document.getElementById('theme-accent');
+  const rowOdd = document.getElementById('theme-row-odd');
+  const rowEven = document.getElementById('theme-row-even');
+  const border = document.getElementById('theme-border');
+
   const theme = {
-    accent: document.getElementById('theme-accent').value || DEFAULT_THEME.accent,
-    rowOdd: document.getElementById('theme-row-odd').value || DEFAULT_THEME.rowOdd,
-    rowEven: document.getElementById('theme-row-even').value || DEFAULT_THEME.rowEven,
-    border: document.getElementById('theme-border').value || DEFAULT_THEME.border
+    accent: accent?.value || DEFAULT_THEME.accent,
+    rowOdd: rowOdd?.value || DEFAULT_THEME.rowOdd,
+    rowEven: rowEven?.value || DEFAULT_THEME.rowEven,
+    border: border?.value || DEFAULT_THEME.border
   };
+
   saveTheme(theme);
   applyTheme(theme);
   closeSettingsModal();
 }
 
 /* ---------------------------------------------------------
-   GAME SWITCHER
+   Game buttons
 --------------------------------------------------------- */
 
 function setGame(laneId, gameNum) {
@@ -681,7 +741,7 @@ function setGame(laneId, gameNum) {
 }
 
 /* ---------------------------------------------------------
-   INIT
+   Init
 --------------------------------------------------------- */
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -696,45 +756,65 @@ document.addEventListener('DOMContentLoaded', () => {
   renderPinButtons(lane);
 
   const toggleBtn = document.getElementById('view-toggle');
-  toggleBtn.addEventListener('click', () => {
-    const current = getViewMode(laneId);
-    const next = current === 'full' ? 'compact' : 'full';
-    setViewMode(laneId, next);
-    renderScore(laneId);
-  });
+  if (toggleBtn) {
+    toggleBtn.addEventListener('click', () => {
+      const current = getViewMode(laneId);
+      const next = current === 'full' ? 'compact' : 'full';
+      setViewMode(laneId, next);
+      renderScore(laneId);
+    });
+  }
 
-  // menu
-  document.getElementById('lane-menu-btn').addEventListener('click', openMenu);
-  document.getElementById('menu-close-btn').addEventListener('click', closeMenu);
-  document.getElementById('menu-close-bottom-btn').addEventListener('click', closeMenu);
+  // menu wiring
+  const menuBtn = document.getElementById('lane-menu-btn');
+  if (menuBtn) menuBtn.addEventListener('click', openMenu);
 
-  document.getElementById('menu-absent-btn').addEventListener('click', () =>
-    handleMarkAbsent(laneId)
-  );
-  document.getElementById('menu-correct-btn').addEventListener('click', () =>
-    handleScoreCorrection(laneId)
-  );
-  document.getElementById('menu-skip-btn').addEventListener('click', () =>
-    handleSkipBowler(laneId)
-  );
-  document.getElementById('menu-settings-btn').addEventListener('click', openSettingsModal);
+  const menuClose = document.getElementById('menu-close-btn');
+  const menuCloseBottom = document.getElementById('menu-close-bottom-btn');
+  if (menuClose) menuClose.addEventListener('click', closeMenu);
+  if (menuCloseBottom) menuCloseBottom.addEventListener('click', closeMenu);
 
-  document.getElementById('lane-menu-overlay').addEventListener('click', (e) => {
-    if (e.target.id === 'lane-menu-overlay') {
-      closeMenu();
-    }
-  });
+  const overlay = document.getElementById('lane-menu-overlay');
+  if (overlay) {
+    overlay.addEventListener('click', (e) => {
+      if (e.target === overlay) closeMenu();
+    });
+  }
 
-  // settings modal wiring
-  document.getElementById('settings-close-btn').addEventListener('click', closeSettingsModal);
-  document.getElementById('settings-close-bottom-btn').addEventListener('click', closeSettingsModal);
-  document.getElementById('settings-save-btn').addEventListener('click', saveSettingsFromForm);
+  const absentBtn = document.getElementById('menu-absent-btn');
+  if (absentBtn) {
+    absentBtn.addEventListener('click', () => handleMarkAbsent(laneId));
+  }
 
-  document.getElementById('settings-overlay').addEventListener('click', (e) => {
-    if (e.target.id === 'settings-overlay') {
-      closeSettingsModal();
-    }
-  });
+  const skipBtn = document.getElementById('menu-skip-btn');
+  if (skipBtn) {
+    skipBtn.addEventListener('click', () => handleSkipBowler(laneId));
+  }
+
+  const correctBtn = document.getElementById('menu-correct-btn');
+  if (correctBtn) {
+    correctBtn.addEventListener('click', () => handleScoreCorrection(laneId));
+  }
+
+  const settingsBtn = document.getElementById('menu-settings-btn');
+  if (settingsBtn) {
+    settingsBtn.addEventListener('click', openSettingsModal);
+  }
+
+  const settingsOverlay = document.getElementById('settings-overlay');
+  if (settingsOverlay) {
+    settingsOverlay.addEventListener('click', (e) => {
+      if (e.target === settingsOverlay) closeSettingsModal();
+    });
+  }
+
+  const settingsClose = document.getElementById('settings-close-btn');
+  const settingsCloseBottom = document.getElementById('settings-close-bottom-btn');
+  if (settingsClose) settingsClose.addEventListener('click', closeSettingsModal);
+  if (settingsCloseBottom) settingsCloseBottom.addEventListener('click', closeSettingsModal);
+
+  const settingsSave = document.getElementById('settings-save-btn');
+  if (settingsSave) settingsSave.addEventListener('click', saveSettingsFromForm);
 
   // game buttons
   const g1 = document.getElementById('game1-btn');
