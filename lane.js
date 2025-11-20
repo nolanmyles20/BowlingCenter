@@ -56,7 +56,34 @@ function handleRoll(laneId, pins) {
   renderScore(laneId);
 }
 
-function formatFrameRolls(frameIndex, frame, totalFrames) {
+/* ---------- SCORING GRID ---------- */
+
+// Fill out 10 frames even if some are not played yet
+function buildFullFrames(frames) {
+  const full = [];
+  for (let i = 1; i <= 10; i++) {
+    const existing = frames.find(f => f.frame === i);
+    if (existing) {
+      full.push({
+        frame: existing.frame,
+        rolls: existing.rolls,
+        frame_score: existing.frame_score,
+        running_total: existing.running_total
+      });
+    } else {
+      full.push({
+        frame: i,
+        rolls: [],
+        frame_score: null,
+        running_total: null
+      });
+    }
+  }
+  return full;
+}
+
+// Turn pin counts into X, /, -, etc
+function formatFrameRolls(frameIndex, frame) {
   const rolls = frame.rolls;
 
   // Frames 1–9
@@ -64,23 +91,27 @@ function formatFrameRolls(frameIndex, frame, totalFrames) {
     if (rolls[0] === 10) {
       return ['X', ''];
     }
-    const first = rolls[0] ?? '';
-    const second = rolls[1] ?? '';
+    const first = rolls[0];
+    const second = rolls[1];
 
-    if (first + second === 10 && second !== '') {
-      return [first, '/'];
+    if (first == null && second == null) return ['', ''];
+
+    const firstVal = first === 0 ? '-' : (first ?? '');
+    if (first != null && second != null && first + second === 10) {
+      return [firstVal, '/'];
     }
-    return [first === 0 ? '-' : first, second === 0 ? '-' : second];
+    const secondVal = second === 0 ? '-' : (second ?? '');
+    return [firstVal, secondVal];
   }
 
-  // 10th frame – up to 3 rolls
+  // 10th frame (up to 3 balls)
   const symbols = rolls.map((r, i) => {
     if (r === 10) return 'X';
     if (i > 0 && (rolls[i - 1] ?? 0) + r === 10) return '/';
-    return r === 0 ? '-' : r;
+    return r === 0 ? '-' : (r ?? '');
   });
 
-  return [symbols[0] ?? '', symbols.slice(1).join(' ') || ''];
+  return [symbols[0] ?? '', (symbols[1] ?? '') + (symbols[2] ? ' ' + symbols[2] : '')];
 }
 
 function renderScore(laneId) {
@@ -88,26 +119,28 @@ function renderScore(laneId) {
   const scoring = scoreGame(lane.rolls);
   const viewMode = getViewMode(laneId);
 
+  // Always build 10 frames, even with no rolls yet
+  const fullFrames = buildFullFrames(scoring.frames);
+
+  // Decide which frames to show: 10 or last 4
+  let visibleFrames;
+  if (viewMode === 'compact') {
+    visibleFrames = fullFrames.slice(6); // frames 7–10
+  } else {
+    visibleFrames = fullFrames;          // frames 1–10
+  }
+
   const scoreboard = document.getElementById('scoreboard');
   scoreboard.innerHTML = '';
 
-  const frames = scoring.frames;
-  const totalFrames = frames.length;
-
-  // Decide which frames to show
-  let visibleFrames = frames;
-  if (viewMode === 'compact' && totalFrames > 4) {
-    visibleFrames = frames.slice(totalFrames - 4);
-  }
-
-  // Header row (frame numbers)
+  // ---- Header row (frame numbers) ----
   const headerRow = document.createElement('div');
   headerRow.className = 'scoreboard-row scoreboard-header';
 
-  const blankHead = document.createElement('div');
-  blankHead.className = 'scoreboard-cell label-cell';
-  blankHead.textContent = 'Game 1';
-  headerRow.appendChild(blankHead);
+  const gameLabel = document.createElement('div');
+  gameLabel.className = 'scoreboard-cell label-cell';
+  gameLabel.textContent = 'Game 1';
+  headerRow.appendChild(gameLabel);
 
   visibleFrames.forEach(frame => {
     const cell = document.createElement('div');
@@ -118,50 +151,54 @@ function renderScore(laneId) {
 
   scoreboard.appendChild(headerRow);
 
-  // Rolls row
-  const rollsRow = document.createElement('div');
-  rollsRow.className = 'scoreboard-row rolls-row';
+  // For now we support 4 player slots visually
+  const players = [
+    { name: 'Player 1', frames: fullFrames },
+    { name: 'Player 2', frames: fullFrames.map(f => ({ ...f, rolls: [], running_total: null })) },
+    { name: 'Player 3', frames: fullFrames.map(f => ({ ...f, rolls: [], running_total: null })) },
+    { name: 'Player 4', frames: fullFrames.map(f => ({ ...f, rolls: [], running_total: null })) }
+  ];
 
-  const rollsLabel = document.createElement('div');
-  rollsLabel.className = 'scoreboard-cell label-cell small-label';
-  rollsLabel.textContent = 'Rolls';
-  rollsRow.appendChild(rollsLabel);
+  players.forEach((player, pIndex) => {
+    const row = document.createElement('div');
+    row.className = 'scoreboard-row player-row';
 
-  visibleFrames.forEach((frame) => {
-    const cell = document.createElement('div');
-    cell.className = 'scoreboard-cell frame-rolls-cell';
-
-    const [top, bottom] = formatFrameRolls(frame.frame - 1, frame, totalFrames);
-
-    cell.innerHTML = `
-      <div class="rolls-top">${top}</div>
-      <div class="rolls-bottom">${bottom}</div>
+    const labelCell = document.createElement('div');
+    labelCell.className = 'scoreboard-cell label-cell player-label-cell';
+    labelCell.innerHTML = `
+      <div class="player-name">${player.name}</div>
+      <div class="player-total">${
+        pIndex === 0 && scoring.total ? scoring.total : '&nbsp;'
+      }</div>
     `;
-    rollsRow.appendChild(cell);
+    row.appendChild(labelCell);
+
+    const playerFrames = player.frames;
+
+    // We need the same subset of frames as header
+    const allFrames = viewMode === 'compact' ? playerFrames.slice(6) : playerFrames;
+
+    allFrames.forEach((frame, idx) => {
+      const cell = document.createElement('div');
+      cell.className = 'scoreboard-cell player-frame-cell';
+
+      const [top, bottom] = formatFrameRolls(frame.frame - 1, frame);
+      const running = frame.running_total;
+
+      cell.innerHTML = `
+        <div class="rolls-top">${top}</div>
+        <div class="rolls-bottom">${bottom}</div>
+        <div class="frame-running">${running != null ? running : ''}</div>
+      `;
+
+      row.appendChild(cell);
+    });
+
+    scoreboard.appendChild(row);
   });
 
-  scoreboard.appendChild(rollsRow);
-
-  // Frame totals row
-  const totalsRow = document.createElement('div');
-  totalsRow.className = 'scoreboard-row totals-row';
-
-  const totalsLabel = document.createElement('div');
-  totalsLabel.className = 'scoreboard-cell label-cell small-label';
-  totalsLabel.textContent = 'Total';
-  totalsRow.appendChild(totalsLabel);
-
-  visibleFrames.forEach(frame => {
-    const cell = document.createElement('div');
-    cell.className = 'scoreboard-cell frame-total-cell';
-    cell.textContent = frame.running_total;
-    totalsRow.appendChild(cell);
-  });
-
-  scoreboard.appendChild(totalsRow);
-
-  // Game total
-  document.getElementById('total-score').textContent = scoring.total;
+  // Game total (same as Player 1 total for now)
+  document.getElementById('total-score').textContent = scoring.total || 0;
 
   // Update toggle button text
   const toggleBtn = document.getElementById('view-toggle');
@@ -171,6 +208,8 @@ function renderScore(laneId) {
     toggleBtn.textContent = 'Show All 10 Frames';
   }
 }
+
+/* ---------- Lane info ---------- */
 
 function renderLaneInfo(laneId) {
   const lane = getLane(laneId);
@@ -298,7 +337,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
   absentBtn.addEventListener('click', () => {
     handleMarkAbsent();
-    // keep menu open for now
   });
 
   correctBtn.addEventListener('click', () => {
