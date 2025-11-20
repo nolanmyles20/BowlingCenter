@@ -8,10 +8,13 @@
   --color-text: #e5e7eb;
   --color-link: #38bdf8;
 
-  --color-accent: #facc15;            /* highlight, totals, etc */
-  --color-row-odd: #1e293b;           /* player rows */
+  --color-accent: #facc15;
+  --color-row-odd: #1e293b;
   --color-row-even: #0f172a;
   --color-score-border: #991b1b;
+
+  /* active bowler highlight color */
+  --color-highlight: #f97316;
 }
 
 /* ============================================================
@@ -129,7 +132,7 @@ main.lane-main {
 }
 
 /* ============================================================
-   BUTTONS / FORMS (used across pages)
+   BUTTONS / FORMS
    ============================================================ */
 
 .btn-primary,
@@ -183,7 +186,7 @@ main.lane-main {
    ============================================================ */
 
 .lane-controls-panel {
-  flex: 1 1 auto;         /* this grows to fill vertical space */
+  flex: 1 1 auto;
   display: flex;
   flex-direction: column;
   margin-bottom: 0.25rem;
@@ -209,12 +212,11 @@ main.lane-main {
 
 .scoreboard {
   width: 100%;
-  flex: 1 1 auto;     /* scoreboard expands vertically */
+  flex: 1 1 auto;
   border-radius: 6px;
   background: #020617;
   border: 2px solid var(--color-score-border);
   box-shadow: 0 0 20px rgba(0,0,0,0.6);
-
   display: flex;
   flex-direction: column;
 }
@@ -228,12 +230,12 @@ main.lane-main {
   display: flex;
 }
 
-/* player rows scale with height */
 .player-row {
   flex: 1 1 0;
 }
 
 /* grid cells */
+
 .scoreboard-cell {
   padding: 4px 6px;
   border-right: 1px solid #1f2937;
@@ -250,6 +252,7 @@ main.lane-main {
 }
 
 /* left label column */
+
 .scoreboard .label-cell {
   flex: 0 0 12%;
   max-width: 12%;
@@ -260,6 +263,7 @@ main.lane-main {
 }
 
 /* frame columns evenly expand */
+
 .scoreboard .frame-number-cell,
 .scoreboard .player-frame-cell {
   flex: 1 1 0;
@@ -268,6 +272,7 @@ main.lane-main {
 }
 
 /* header frame numbers */
+
 .frame-number-cell {
   font-size: 0.95rem;
   font-weight: 700;
@@ -276,12 +281,10 @@ main.lane-main {
 
 /* ============================================================
    FRAME CONTENT LAYOUT
-   - Big frame score
-   - Two ball values side by side (second to the right)
    ============================================================ */
 
 .frame-score {
-  font-size: 1.35rem;          /* big frame total */
+  font-size: 1.35rem;
   font-weight: 700;
   color: var(--color-accent);
   line-height: 1.1;
@@ -328,11 +331,10 @@ main.lane-main {
   color: var(--color-accent);
 }
 
-/* current bowler: bright + pulsing */
 .player-row.current {
   position: relative;
   background: #1e293b;
-  box-shadow: 0 0 18px rgba(250, 204, 21, 0.7);
+  box-shadow: 0 0 18px var(--color-highlight);
   z-index: 1;
   animation: currentPulse 0.9s infinite alternate;
 }
@@ -344,13 +346,39 @@ main.lane-main {
 
 @keyframes currentPulse {
   from {
-    box-shadow: 0 0 6px rgba(250, 204, 21, 0.5);
+    box-shadow: 0 0 8px var(--color-highlight);
     filter: brightness(1);
   }
   to {
-    box-shadow: 0 0 24px rgba(250, 204, 21, 1);
+    box-shadow: 0 0 28px var(--color-highlight);
     filter: brightness(1.2);
   }
+}
+
+/* Arrow row under HCP for active bowler */
+
+.current-arrows {
+  margin-top: 0.2rem;
+  display: flex;
+  gap: 0.18rem;
+}
+
+.current-arrows .arrow-seg {
+  font-size: 0.95rem;
+  color: var(--color-highlight);
+  opacity: 0.2;
+  animation: arrowPulse 0.9s infinite;
+}
+
+.current-arrows .arrow-seg:nth-child(1) { animation-delay: 0s; }
+.current-arrows .arrow-seg:nth-child(2) { animation-delay: 0.15s; }
+.current-arrows .arrow-seg:nth-child(3) { animation-delay: 0.3s; }
+.current-arrows .arrow-seg:nth-child(4) { animation-delay: 0.45s; }
+
+@keyframes arrowPulse {
+  0%   { opacity: 0.2; transform: translateY(0); }
+  50%  { opacity: 1;   transform: translateY(-2px); }
+  100% { opacity: 0.2; transform: translateY(0); }
 }
 
 /* ============================================================
@@ -379,7 +407,7 @@ main.lane-main {
 }
 
 /* ============================================================
-   SERIES RECAP (compressed)
+   SERIES RECAP
    ============================================================ */
 
 .lane-recap-panel {
