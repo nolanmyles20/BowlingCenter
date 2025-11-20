@@ -138,6 +138,35 @@ function getCurrentFrameForLane(lane) {
   return Math.min(10, completed + 1);
 }
 
+// Is the current game fully complete for all players on this lane?
+function isGameFullyComplete(lane) {
+  const players = lane.players || [];
+  if (!players.length) return false;
+
+  const gIndex = Math.max(0, Math.min(2, (lane.currentGame || 1) - 1));
+  let anyRolls = false;
+
+  for (let i = 0; i < players.length; i++) {
+    const p = players[i];
+    if (!p) continue;
+
+    const games = p.games || [];
+    const game = games[gIndex] || { rolls: [] };
+    const rolls = Array.isArray(game.rolls) ? game.rolls : [];
+
+    if (rolls.length > 0) anyRolls = true;
+
+    const s = scoreGame(rolls);
+    if (!s.frames || s.frames.length < 10) {
+      // Less than 10 scored frames – game not done for this bowler
+      return false;
+    }
+  }
+
+  // At least one bowler actually has rolls, and all have 10 frames
+  return anyRolls;
+}
+
 /* ---------------------------------------------------------
    League base helper (for absent scoring)
 --------------------------------------------------------- */
@@ -260,6 +289,123 @@ function renderPinButtons(lane) {
 }
 
 /* ---------------------------------------------------------
+   Game-complete popup helpers
+--------------------------------------------------------- */
+
+// Build HTML summary for current game's scratch + handicap
+function buildGameCompleteSummaryHtml(lane) {
+  const gIndex = Math.max(0, Math.min(2, (lane.currentGame || 1) - 1));
+  const players = lane.players || [];
+
+  let rows = '';
+  players.forEach((p) => {
+    if (!p) return;
+    const games = p.games || [];
+    const game = games[gIndex] || { rolls: [] };
+    const s = scoreGame(game.rolls || []);
+    const scratch = s.total || 0;
+    const hcp = p.handicap || 0;
+    const totalH = scratch + hcp;
+
+    rows += `
+      <tr>
+        <td>${p.name || 'Bowler'}</td>
+        <td>${scratch}</td>
+        <td>${hcp}</td>
+        <td>${totalH}</td>
+      </tr>
+    `;
+  });
+
+  return `
+    <table class="recap-table">
+      <thead>
+        <tr>
+          <th>Bowler</th>
+          <th>Scratch</th>
+          <th>Hcp</th>
+          <th>Total</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${rows}
+      </tbody>
+    </table>
+  `;
+}
+
+function showGameCompleteModal(laneId) {
+  const lane = getLane(laneId);
+  const currentGame = lane.currentGame || 1;
+
+  const overlay = document.getElementById('game-complete-overlay');
+  const title = document.getElementById('game-complete-title');
+  const summary = document.getElementById('game-complete-summary');
+  const nextBtn = document.getElementById('game-complete-next-btn');
+
+  if (!overlay || !title || !summary || !nextBtn) return;
+
+  title.textContent = `Game ${currentGame} Complete`;
+  summary.innerHTML = buildGameCompleteSummaryHtml(lane);
+
+  if (currentGame < 3) {
+    nextBtn.textContent = `Start Game ${currentGame + 1}`;
+    nextBtn.dataset.nextGame = String(currentGame + 1);
+    nextBtn.disabled = false;
+  } else {
+    nextBtn.textContent = 'Series Complete';
+    nextBtn.dataset.nextGame = '';
+    nextBtn.disabled = true;
+  }
+
+  overlay.classList.remove('hidden');
+}
+
+function hideGameCompleteModal() {
+  const overlay = document.getElementById('game-complete-overlay');
+  if (overlay) overlay.classList.add('hidden');
+}
+
+// Called after each roll to see if we just finished a game
+function checkAndHandleGameComplete(laneId) {
+  const lane = getLane(laneId);
+  if (!isGameFullyComplete(lane)) return;
+
+  // Re-render so no row is current
+  renderScore(laneId);
+  showGameCompleteModal(laneId);
+}
+
+// Start the next game when button is pressed
+function startNextGameFromModal(laneId) {
+  const nextBtn = document.getElementById('game-complete-next-btn');
+  if (!nextBtn) return;
+
+  const nextGameStr = nextBtn.dataset.nextGame || '';
+  const nextGame = Number(nextGameStr);
+
+  hideGameCompleteModal();
+
+  // If there is no next game (e.g., after game 3)
+  if (!nextGame || Number.isNaN(nextGame)) {
+    return;
+  }
+
+  // Switch lane to next game, reset to first bowler
+  updateLane(laneId, { currentGame: nextGame, currentPlayerIndex: 0 });
+
+  // Show the "bowl to start" banner for the new game
+  const banner = document.getElementById('next-game-banner');
+  if (banner) {
+    banner.textContent = `Bowl to start Game ${nextGame}`;
+    banner.classList.remove('hidden');
+  }
+
+  renderScore(laneId);
+  renderPinButtons(getLane(laneId));
+}
+
+/* ---------------------------------------------------------
    Handle roll input
 --------------------------------------------------------- */
 
@@ -269,6 +415,10 @@ function handleRoll(laneId, pins) {
     alert('Lane is not active');
     return;
   }
+
+  // Hide "bowl to start next game" banner once someone actually throws a ball
+  const banner = document.getElementById('next-game-banner');
+  if (banner) banner.classList.add('hidden');
 
   const playersBefore = lane.players || [];
   const currentIndex = lane.currentPlayerIndex || 0;
@@ -305,6 +455,9 @@ function handleRoll(laneId, pins) {
 
   renderScore(laneId);
   renderPinButtons(getLane(laneId));
+
+  // After this roll (and any auto-absent frames), check if the game is complete
+  checkAndHandleGameComplete(laneId);
 }
 
 /* ---------------------------------------------------------
@@ -373,6 +526,7 @@ function renderScore(laneId) {
   const lane = getLane(laneId);
   const viewMode = getViewMode(laneId);
   const gIndex = Math.max(0, Math.min(2, (lane.currentGame || 1) - 1));
+  const gameComplete = isGameFullyComplete(lane);
 
   const scoreboard = document.getElementById('scoreboard');
   if (!scoreboard) return;
@@ -392,7 +546,7 @@ function renderScore(laneId) {
         name: src.name || `Player ${i + 1}`,
         handicap: src.handicap || 0,
         absent: !!src.absent,
-        isCurrent: i === (lane.currentPlayerIndex || 0),
+        isCurrent: !gameComplete && i === (lane.currentPlayerIndex || 0),
         scoring,
         fullFrames
       });
@@ -871,6 +1025,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   renderScore(laneId);
   renderPinButtons(getLane(laneId));
+  checkAndHandleGameComplete(laneId);
 
   const toggleBtn = document.getElementById('view-toggle');
   if (toggleBtn) {
@@ -932,6 +1087,23 @@ document.addEventListener('DOMContentLoaded', () => {
 
   const settingsSave = document.getElementById('settings-save-btn');
   if (settingsSave) settingsSave.addEventListener('click', saveSettingsFromForm);
+
+  // Game complete modal buttons
+  const gcClose = document.getElementById('game-complete-close');
+  const gcNext = document.getElementById('game-complete-next-btn');
+  const gcOverlay = document.getElementById('game-complete-overlay');
+
+  if (gcClose) {
+    gcClose.addEventListener('click', hideGameCompleteModal);
+  }
+  if (gcNext) {
+    gcNext.addEventListener('click', () => startNextGameFromModal(laneId));
+  }
+  if (gcOverlay) {
+    gcOverlay.addEventListener('click', (e) => {
+      if (e.target === gcOverlay) hideGameCompleteModal();
+    });
+  }
 
   // game buttons
   const g1 = document.getElementById('game1-btn');
