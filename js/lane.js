@@ -174,10 +174,6 @@ function isGameFullyComplete(lane) {
 }
 
 
-  // At least one bowler actually has rolls, and all have 10 frames
-  return anyRolls;
-}
-
 /* ---------------------------------------------------------
    League base helper (for absent scoring)
 --------------------------------------------------------- */
