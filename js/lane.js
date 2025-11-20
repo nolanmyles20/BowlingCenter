@@ -19,7 +19,7 @@ const DEFAULT_THEME = {
   rowOdd: '#1e293b',
   rowEven: '#0f172a',
   border: '#991b1b',
-  highlight: '#f97316' // active bowler glow
+  highlight: '#f97316' // separate color for active row + arrows
 };
 
 function loadTheme() {
@@ -40,6 +40,7 @@ function applyTheme(theme) {
   root.style.setProperty('--color-row-odd', t.rowOdd);
   root.style.setProperty('--color-row-even', t.rowEven);
   root.style.setProperty('--color-score-border', t.border);
+  // Highlight / arrow color is independent
   root.style.setProperty('--color-highlight', t.highlight);
 }
 
