@@ -24,14 +24,14 @@ body {
   color: #e5e7eb;
 }
 
-nav a {
+nav.top-nav a {
   margin-right: 0.5rem;
   color: #38bdf8;
   text-decoration: none;
   font-size: 0.9rem;
 }
 
-nav a:hover {
+nav.top-nav a:hover {
   text-decoration: underline;
 }
 
@@ -228,7 +228,7 @@ main {
   color: #facc15;
 }
 
-/* SCOREBOARD */
+/* ---------------- SCOREBOARD (new full version) ---------------- */
 
 .scoreboard {
   width: 100%;
@@ -249,14 +249,6 @@ main {
   background: #111827;
 }
 
-.scoreboard-row:nth-child(2) {
-  background: #7f1d1d; /* red bar like house scoring */
-}
-
-.scoreboard-row:nth-child(3) {
-  background: #b91c1c;
-}
-
 .scoreboard-cell {
   padding: 0.35rem 0.4rem;
   border-right: 1px solid #1f2937;
@@ -272,18 +264,11 @@ main {
 }
 
 .label-cell {
-  min-width: 70px;
+  min-width: 80px;
   font-weight: 600;
   font-size: 0.85rem;
   background: #020617;
   color: #e5e7eb;
-}
-
-.small-label {
-  font-size: 0.75rem;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  color: #f9fafb;
 }
 
 .frame-number-cell {
@@ -292,8 +277,34 @@ main {
   color: #e5e7eb;
 }
 
-.frame-rolls-cell {
-  font-size: 0.95rem;
+/* player rows */
+
+.player-row:nth-child(odd) {
+  background: #1e293b;
+}
+
+.player-row:nth-child(even) {
+  background: #0f172a;
+}
+
+.player-label-cell {
+  align-items: flex-start;
+  padding-left: 0.5rem;
+}
+
+.player-name {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #e5e7eb;
+}
+
+.player-total {
+  font-size: 0.8rem;
+  color: #facc15;
+}
+
+.player-frame-cell {
+  font-size: 0.9rem;
   color: #fee2e2;
 }
 
@@ -307,9 +318,9 @@ main {
   opacity: 0.85;
 }
 
-.frame-total-cell {
-  font-size: 0.95rem;
-  font-weight: 600;
+.frame-running {
+  margin-top: 0.05rem;
+  font-size: 0.75rem;
   color: #facc15;
 }
 
@@ -321,31 +332,7 @@ main {
   gap: 0.25rem;
 }
 
-/* RESPONSIVE */
-
-@media (max-width: 800px) {
-  .lane-main {
-    grid-template-columns: 1fr;
-  }
-  .lane-info-panel {
-    grid-column: 1 / 2;
-  }
-  .lane-controls-panel,
-  .lane-pin-panel {
-    grid-column: 1 / 2;
-  }
-}
-/* ----- LANE MENU MODAL ----- */
-
-.top-nav {
-  display: flex;
-  align-items: center;
-  gap: 0.4rem;
-}
-
-.lane-menu-btn {
-  margin-left: 0.75rem;
-}
+/* ------------------- MODAL ------------------- */
 
 .hidden {
   display: none !important;
@@ -365,7 +352,7 @@ main {
   background: #020617;
   border-radius: 8px;
   border: 1px solid #1f2937;
-  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.8);
+  box-shadow: 0 20px 40px rgba(0,0,0,0.8);
   padding: 0.75rem 1rem 0.8rem;
   min-width: 260px;
   max-width: 320px;
@@ -376,11 +363,6 @@ main {
   justify-content: space-between;
   align-items: center;
   margin-bottom: 0.5rem;
-}
-
-.modal-header h2 {
-  font-size: 1rem;
-  margin: 0;
 }
 
 .modal-body {
@@ -399,4 +381,19 @@ main {
 .modal-footer {
   display: flex;
   justify-content: flex-end;
+}
+
+/* RESPONSIVE */
+
+@media (max-width: 800px) {
+  .lane-main {
+    grid-template-columns: 1fr;
+  }
+  .lane-info-panel {
+    grid-column: 1 / 2;
+  }
+  .lane-controls-panel,
+  .lane-pin-panel {
+    grid-column: 1 / 2;
+  }
 }
