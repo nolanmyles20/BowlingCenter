@@ -139,6 +139,94 @@ function getCurrentFrameForLane(lane) {
 }
 
 /* ---------------------------------------------------------
+   League base helper (for absent scoring)
+--------------------------------------------------------- */
+
+/**
+ * Get league base (for average calculation) for this lane.
+ * Default is 210 if not set on the league.
+ * Expected: state.leagues[leagueName].hcpBase can override.
+ */
+function getLeagueBaseForLane(lane) {
+  try {
+    const state = getState();
+    if (lane.league && state.leagues && state.leagues[lane.league]) {
+      const lg = state.leagues[lane.league];
+      if (typeof lg.hcpBase === 'number') {
+        return lg.hcpBase;
+      }
+    }
+  } catch (e) {
+    // fall through
+  }
+  return 210;
+}
+
+/* ---------------------------------------------------------
+   Auto-absent scoring
+   - If current bowler is marked absent, we auto-fill an open frame
+     using average = leagueBase - handicap, spread over 10 frames.
+   - After filling the frame, we advance to next bowler.
+--------------------------------------------------------- */
+
+function autoProcessAbsent(laneId) {
+  // safety guard to avoid infinite loops
+  let safety = 0;
+
+  while (safety++ < 40) {
+    const lane = getLane(laneId);
+    const players = lane.players || [];
+    if (!players.length) break;
+
+    const currentIndex = lane.currentPlayerIndex || 0;
+    const player = players[currentIndex];
+    if (!player || !player.absent) {
+      // current bowler is present -> stop auto-processing
+      break;
+    }
+
+    const gIndex = Math.max(0, Math.min(2, (lane.currentGame || 1) - 1));
+    const game = player.games?.[gIndex] || { rolls: [] };
+    const rolls = Array.isArray(game.rolls) ? game.rolls : [];
+
+    // if game is already "full" for this player, move on
+    if (rolls.length >= 20) {
+      advanceToNextPlayer(laneId);
+      continue;
+    }
+
+    const currentFrame = getCurrentFrameForLane(lane);
+    if (currentFrame > 10) {
+      advanceToNextPlayer(laneId);
+      continue;
+    }
+
+    // compute their "average" based on base and handicap
+    const leagueBase = getLeagueBaseForLane(lane);
+    const hcp = player.handicap || 0;
+    const gameAverage = Math.max(0, leagueBase - hcp); // rough average pins per game
+    const perFrame = gameAverage / 10;
+
+    // simple open-frame model: two rolls that sum close to perFrame, never > 10
+    let r1 = Math.floor(perFrame * 0.6);
+    if (r1 < 0) r1 = 0;
+    if (r1 > 9) r1 = 9;
+
+    let r2 = Math.round(perFrame - r1);
+    if (r2 < 0) r2 = 0;
+    if (r1 + r2 > 10) {
+      r2 = 10 - r1;
+    }
+
+    addRollForCurrentPlayer(laneId, r1);
+    addRollForCurrentPlayer(laneId, r2);
+
+    // move to next bowler
+    advanceToNextPlayer(laneId);
+  }
+}
+
+/* ---------------------------------------------------------
    Pin buttons
 --------------------------------------------------------- */
 
@@ -211,6 +299,9 @@ function handleRoll(laneId, pins) {
   if (didLastRollCompleteFrame(rollsBefore, rollsAfter)) {
     advanceToNextPlayer(laneId);
   }
+
+  // after human roll + advance, process absent bowlers
+  autoProcessAbsent(laneId);
 
   renderScore(laneId);
   renderPinButtons(getLane(laneId));
@@ -642,12 +733,15 @@ function closeMenu() {
 
 function handleMarkAbsent(laneId) {
   toggleCurrentPlayerAbsent(laneId);
+  // After toggling absent, process auto absent immediately
+  autoProcessAbsent(laneId);
   renderScore(laneId);
   renderPinButtons(getLane(laneId));
 }
 
 function handleSkipBowler(laneId) {
   advanceToNextPlayer(laneId);
+  autoProcessAbsent(laneId);
   renderScore(laneId);
   renderPinButtons(getLane(laneId));
 }
@@ -747,6 +841,7 @@ function saveSettingsFromForm() {
 
 function setGame(laneId, gameNum) {
   updateLane(laneId, { currentGame: gameNum });
+  autoProcessAbsent(laneId);
   renderScore(laneId);
   renderPinButtons(getLane(laneId));
 
@@ -770,8 +865,12 @@ document.addEventListener('DOMContentLoaded', () => {
   const lane = getLane(laneId);
 
   renderLaneInfo(laneId);
+
+  // process absents right away (e.g., if first bowler is absent)
+  autoProcessAbsent(laneId);
+
   renderScore(laneId);
-  renderPinButtons(lane);
+  renderPinButtons(getLane(laneId));
 
   const toggleBtn = document.getElementById('view-toggle');
   if (toggleBtn) {
