@@ -2,52 +2,43 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Bowling Front Desk</title>
-  <link rel="stylesheet" href="css/styles.css" />
+  <title>Front Desk – Bowling Center</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="stylesheet" href="css/styles.css" />
 </head>
 <body>
   <header class="top-bar">
     <h1>Front Desk</h1>
-    <nav>
+    <nav class="top-nav">
       <a href="index.html">Front Desk</a>
       <a href="bowlers.html">Bowlers</a>
       <a href="teams.html">Teams</a>
-      <span class="lane-links">
-        Lanes:
-        <a href="lane.html?lane=1">1</a>
-        <a href="lane.html?lane=2">2</a>
-        <a href="lane.html?lane=3">3</a>
-        <a href="lane.html?lane=4">4</a>
-        <a href="lane.html?lane=5">5</a>
-        <a href="lane.html?lane=6">6</a>
-        <a href="lane.html?lane=7">7</a>
-        <a href="lane.html?lane=8">8</a>
-        <a href="lane.html?lane=9">9</a>
-        <a href="lane.html?lane=10">10</a>
-        <a href="lane.html?lane=11">11</a>
-        <a href="lane.html?lane=12">12</a>
-      </span>
     </nav>
   </header>
 
   <main>
-    <h2>Lanes</h2>
-    <table class="lanes-table" id="lanes-table">
-      <thead>
-        <tr>
-          <th>Lane</th>
-          <th>Active</th>
-          <th>League</th>
-          <th>Mode</th>
-          <th>Team</th>
-          <th>Actions</th>
-        </tr>
-      </thead>
-      <tbody>
-        <!-- filled by JS -->
-      </tbody>
-    </table>
+    <section class="panel">
+      <h2>Lane Control</h2>
+      <p style="font-size:0.85rem;color:#9ca3af;margin-top:0.25rem;">
+        Tap a lane to set league, mode, and which team is assigned. “Open” jumps to that lane screen.
+      </p>
+
+      <table class="lanes-table">
+        <thead>
+          <tr>
+            <th>Lane</th>
+            <th>Status</th>
+            <th>League</th>
+            <th>Mode</th>
+            <th>Team</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody id="lanes-table-body">
+          <!-- Filled by JS -->
+        </tbody>
+      </table>
+    </section>
   </main>
 
   <script type="module" src="js/frontdesk.js"></script>
