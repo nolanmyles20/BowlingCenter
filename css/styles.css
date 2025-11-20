@@ -416,3 +416,32 @@ main {
     background-color: #1f2937;
   }
 }
+/* --- Scoreboard column layout fix --- */
+.scoreboard {
+  overflow-x: auto;           /* just in case on small screens */
+}
+
+.scoreboard-row {
+  display: flex;
+}
+
+/* left label / bowler name column */
+.scoreboard .label-cell {
+  flex: 0 0 120px;            /* fixed width – adjust 120px if you want */
+  max-width: 120px;
+  box-sizing: border-box;
+}
+
+/* frame number cells and per-frame cells */
+.scoreboard .frame-number-cell,
+.scoreboard .player-frame-cell {
+  flex: 1 0 40px;             /* same width for all frame columns */
+  min-width: 40px;
+  text-align: center;
+  box-sizing: border-box;
+}
+
+/* keep text from touching the borders */
+.scoreboard-cell {
+  padding: 4px 6px;
+}
