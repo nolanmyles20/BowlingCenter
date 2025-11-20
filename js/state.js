@@ -14,6 +14,7 @@ const DEFAULT_STATE = {
   lanes: {},
   bowlers: {},
   teams: {},
+  leagues: {},          // <--- added leagues store for hcp base etc
   nextBowlerId: 1,
   nextTeamId: 1
 };
@@ -44,6 +45,7 @@ function loadState() {
 
     if (parsed.bowlers) state.bowlers = parsed.bowlers;
     if (parsed.teams) state.teams = parsed.teams;
+    if (parsed.leagues) state.leagues = parsed.leagues; // <--- keep leagues if present
     if (parsed.lanes) {
       Object.keys(parsed.lanes).forEach(k => {
         state.lanes[k] = { ...state.lanes[k], ...parsed.lanes[k] };
@@ -202,7 +204,9 @@ export function resetLane(laneId) {
   return lane;
 }
 
-// used by lane.js
+// ---------- rolls / turn order ----------
+
+// Normal add-roll: respects "absent" flag (won't write rolls for absent bowler)
 export function addRollForCurrentPlayer(laneId, pins) {
   const lane = getLane(laneId);
   const gameIdx = getCurrentGameIndex(lane);
@@ -225,12 +229,29 @@ export function addRollForCurrentPlayer(laneId, pins) {
   const player = lane.players[idx];
   ensurePlayerGames(player);
 
-  if (!player.absent) {
-    const game = player.games[gameIdx];
-    if (!Array.isArray(game.rolls)) game.rolls = [];
-    game.rolls.push(pins);
-    saveState();
-  }
+  // do not score for absent bowlers in normal flow
+  if (player.absent) return;
+
+  const game = player.games[gameIdx];
+  if (!Array.isArray(game.rolls)) game.rolls = [];
+  game.rolls.push(pins);
+  saveState();
+}
+
+// Force add-roll: ignores "absent" flag (used by auto-absent logic)
+export function forceAddRollForCurrentPlayer(laneId, pins) {
+  const lane = getLane(laneId);
+  const gameIdx = getCurrentGameIndex(lane);
+  if (!lane.players.length) return;
+
+  const idx = lane.currentPlayerIndex || 0;
+  const player = lane.players[idx];
+  ensurePlayerGames(player);
+
+  const game = player.games[gameIdx];
+  if (!Array.isArray(game.rolls)) game.rolls = [];
+  game.rolls.push(pins);
+  saveState();
 }
 
 export function toggleCurrentPlayerAbsent(laneId) {
@@ -242,17 +263,15 @@ export function toggleCurrentPlayerAbsent(laneId) {
   saveState();
 }
 
+// Simple next-player: does NOT skip absent
+// (lane.js's autoProcessAbsent handles absent scoring/advancing)
 export function advanceToNextPlayer(laneId) {
   const lane = getLane(laneId);
   const players = lane.players;
   if (!players.length) return;
 
   let idx = lane.currentPlayerIndex || 0;
-  const startIdx = idx;
-  do {
-    idx = (idx + 1) % players.length;
-    if (!players[idx].absent) break;
-  } while (idx !== startIdx);
+  idx = (idx + 1) % players.length;
 
   lane.currentPlayerIndex = idx;
   saveState();
