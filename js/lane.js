@@ -28,20 +28,8 @@ function setViewMode(laneId, mode) {
 }
 
 /* ---------------------------------------------------------
-   PIN BUTTONS
+   FRAME / ROLL HELPERS
 --------------------------------------------------------- */
-
-function renderPinButtons(lane) {
-  const container = document.getElementById('pin-buttons');
-  container.innerHTML = '';
-  for (let i = 0; i <= 10; i++) {
-    const btn = document.createElement('button');
-    btn.className = 'btn-pin';
-    btn.textContent = i;
-    btn.onclick = () => handleRoll(lane.id, i);
-    container.appendChild(btn);
-  }
-}
 
 // Count how many frames (1–9) are fully completed in a roll sequence
 function countCompletedFrames9(rolls) {
@@ -54,8 +42,7 @@ function countCompletedFrames9(rolls) {
       frame += 1;
       i += 1;
     } else {
-      // need two balls for a full frame
-      if (i + 1 >= rolls.length) break; // incomplete frame waiting for 2nd ball
+      if (i + 1 >= rolls.length) break; // incomplete second ball
       frame += 1;
       i += 2;
     }
@@ -63,11 +50,87 @@ function countCompletedFrames9(rolls) {
   return frame;
 }
 
+// Did the last roll finish a frame 1–9?
 function didLastRollCompleteFrame(rollsBefore, rollsAfter) {
   const beforeFrames = countCompletedFrames9(rollsBefore);
   const afterFrames = countCompletedFrames9(rollsAfter);
   return afterFrames > beforeFrames;
 }
+
+/**
+ * For frames 1–9 only:
+ * Look at existing rolls and see if we are waiting for the second ball of a frame,
+ * and if so, how many pins have already been knocked down.
+ *
+ * Returns:
+ *   { isSecondBall: true, frameIndex, pinsSoFar }  for frames 1–9
+ *   or { isSecondBall: false }
+ */
+function getSecondBallContextFrames1to9(rolls) {
+  let frame = 0;
+  let i = 0;
+
+  while (frame < 9 && i < rolls.length) {
+    const r = rolls[i];
+
+    if (r === 10) {
+      // Strike, full frame in one roll
+      frame += 1;
+      i += 1;
+    } else {
+      if (i + 1 >= rolls.length) {
+        // We have only the first ball of this frame (1–9)
+        return {
+          isSecondBall: true,
+          frameIndex: frame,      // 0-based frame number
+          pinsSoFar: rolls[i] || 0
+        };
+      }
+      // We have both balls for this frame, move on
+      frame += 1;
+      i += 2;
+    }
+  }
+
+  return { isSecondBall: false };
+}
+
+/* ---------------------------------------------------------
+   PIN BUTTONS
+--------------------------------------------------------- */
+
+function renderPinButtons(lane) {
+  const container = document.getElementById('pin-buttons');
+  container.innerHTML = '';
+
+  const players = lane.players || [];
+  const currentIndex = lane.currentPlayerIndex || 0;
+  const player = players[currentIndex] || { rolls: [] };
+  const rolls = Array.isArray(player.rolls) ? player.rolls : [];
+
+  // Default: allow 0–10 pins
+  let maxPins = 10;
+
+  // For frames 1–9, if we are on the 2nd ball of the frame,
+  // only allow up to (10 - firstBallPins)
+  const ctx = getSecondBallContextFrames1to9(rolls);
+  if (ctx.isSecondBall && ctx.frameIndex < 9) {
+    const remaining = 10 - ctx.pinsSoFar;
+    maxPins = Math.max(0, Math.min(10, remaining));
+  }
+
+  for (let pins = 0; pins <= maxPins; pins++) {
+    const btn = document.createElement('button');
+    btn.className = 'btn-pin';
+    btn.textContent = pins;
+    btn.onclick = () => handleRoll(lane.id, pins);
+    container.appendChild(btn);
+  }
+}
+
+/* ---------------------------------------------------------
+   HANDLE ROLL
+--------------------------------------------------------- */
 
 function handleRoll(laneId, pins) {
   const lane = getLane(laneId);
@@ -86,12 +149,13 @@ function handleRoll(laneId, pins) {
 
   let effectivePins = pins;
 
-  // Simple 9-pin no-tap logic
+  // Simple 9-pin no-tap logic for the FIRST ball of a frame
   if (lane.mode === '9pin') {
     const ballsSoFar = rollsBefore.length;
-    const frameRollCount = ballsSoFar % 2;
-    if (frameRollCount === 0 && pins === 9) {
-      effectivePins = 10;
+    const ctx = getSecondBallContextFrames1to9(rollsBefore);
+    const isFirstBallOfFrame = !ctx.isSecondBall; // if not waiting for 2nd, we're at first ball
+    if (isFirstBallOfFrame && pins === 9) {
+      effectivePins = 10; // treat 9 as strike
     }
   }
 
@@ -112,6 +176,8 @@ function handleRoll(laneId, pins) {
   }
 
   renderScore(laneId);
+  // Rebuild pin buttons based on new frame state
+  renderPinButtons(getLane(laneId));
 }
 
 /* ---------------------------------------------------------
@@ -197,7 +263,7 @@ function renderScore(laneId) {
         fullFrames
       });
     } else {
-      // Extra slots beyond real team: show as ABSENT and skip in rotation (they're not in state)
+      // Extra slots beyond real team: show as ABSENT and skip in rotation (they're not in lane.players)
       const scoring = scoreGame([]);
       const fullFrames = buildFullFrames([]);
       players.push({
@@ -329,11 +395,13 @@ function closeMenu() {
 function handleMarkAbsent(laneId) {
   toggleCurrentPlayerAbsent(laneId);
   renderScore(laneId);
+  renderPinButtons(getLane(laneId));
 }
 
 function handleSkipBowler(laneId) {
   advanceToNextPlayer(laneId);
   renderScore(laneId);
+  renderPinButtons(getLane(laneId));
 }
 
 function handleScoreCorrection(laneId) {
@@ -373,6 +441,7 @@ function handleScoreCorrection(laneId) {
   player.rolls[index - 1] = pins;
   saveState();
   renderScore(laneId);
+  renderPinButtons(getLane(laneId));
 }
 
 /* ---------------------------------------------------------
@@ -384,8 +453,8 @@ document.addEventListener('DOMContentLoaded', () => {
   const lane = getLane(laneId);
 
   renderLaneInfo(laneId);
-  renderPinButtons(lane);
   renderScore(laneId);
+  renderPinButtons(lane);
 
   // View toggle
   const toggleBtn = document.getElementById('view-toggle');
