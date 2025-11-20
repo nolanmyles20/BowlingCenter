@@ -210,7 +210,7 @@ function getLeagueBaseForLane(lane) {
 --------------------------------------------------------- */
 
 function autoProcessAbsent(laneId) {
-  // safety guard to avoid infinite loops
+  // safety guard so we don't loop forever
   let safety = 0;
 
   while (safety++ < 40) {
@@ -226,11 +226,15 @@ function autoProcessAbsent(laneId) {
     }
 
     const gIndex = Math.max(0, Math.min(2, (lane.currentGame || 1) - 1));
-    const game = player.games?.[gIndex] || { rolls: [] };
+    const games = player.games || [];
+    const game = games[gIndex] || { rolls: [] };
     const rolls = Array.isArray(game.rolls) ? game.rolls : [];
 
-    // if game is already "full" for this player, move on
-    if (rolls.length >= 20) {
+    // If this player's game is already fully complete, just move on
+    const s = scoreGame(rolls);
+    const frames = s.frames || [];
+    const f10 = frames.find(f => f.frame === 10);
+    if (f10 && f10.running_total != null) {
       advanceToNextPlayer(laneId);
       continue;
     }
@@ -261,7 +265,7 @@ function autoProcessAbsent(laneId) {
     addRollForCurrentPlayer(laneId, r1);
     addRollForCurrentPlayer(laneId, r2);
 
-    // move to next bowler
+    // move to next bowler (loop continues if *they* are also absent)
     advanceToNextPlayer(laneId);
   }
 }
