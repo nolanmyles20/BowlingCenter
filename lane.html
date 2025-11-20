@@ -1,10 +1,10 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>Lane</title>
-  <link rel="stylesheet" href="css/styles.css">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8" />
+  <title>Lane View</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="stylesheet" href="css/styles.css" />
 </head>
 <body class="lane-body">
   <header class="top-bar">
@@ -13,30 +13,28 @@
       <a href="index.html">Front Desk</a>
       <a href="bowlers.html">Bowlers</a>
       <a href="teams.html">Teams</a>
-      <!-- New menu button, right side -->
-      <button id="lane-menu-btn" class="btn-secondary small lane-menu-btn">
-        Menu ▾
-      </button>
+      <button id="lane-menu-btn" class="btn-secondary small">Menu</button>
     </nav>
   </header>
 
   <main class="lane-main">
-    <section id="lane-info" class="panel lane-info-panel"></section>
+    <section class="panel lane-info-panel">
+      <div id="lane-info"></div>
+      <div class="game-switcher">
+        <button id="game1-btn" class="btn-small btn-game">Game 1</button>
+        <button id="game2-btn" class="btn-small btn-game">Game 2</button>
+        <button id="game3-btn" class="btn-small btn-game">Game 3</button>
+      </div>
+      <button id="view-toggle" class="btn-small">Show Last 4 Frames</button>
+    </section>
 
     <section class="panel lane-controls-panel">
       <div class="lane-controls-header">
         <h2>Scoring</h2>
-        <button id="view-toggle" class="btn-secondary small">
-          Show Last 4 Frames
-        </button>
       </div>
-
-      <div class="scoreboard" id="scoreboard">
-        <!-- Filled by JS -->
-      </div>
-
+      <div id="scoreboard" class="scoreboard"></div>
       <div class="lane-total-row">
-        <span class="lane-total-label">Game Total:</span>
+        <span class="lane-total-label">Team Scratch Total:</span>
         <span id="total-score" class="lane-total-value">0</span>
       </div>
     </section>
@@ -45,30 +43,26 @@
       <h2>Enter Roll</h2>
       <div id="pin-buttons" class="pins-buttons"></div>
     </section>
+
+    <section id="series-recap" class="panel lane-recap-panel">
+      <!-- filled by JS -->
+    </section>
   </main>
 
   <!-- Lane menu modal -->
   <div id="lane-menu-overlay" class="modal-overlay hidden">
     <div class="modal-window">
       <div class="modal-header">
-        <h2>Lane Menu</h2>
-        <button id="menu-close-btn" class="btn-secondary small">✕</button>
+        <h3>Lane Menu</h3>
+        <button id="menu-close-btn" class="btn-small btn-secondary">X</button>
       </div>
       <div class="modal-body">
-        <button id="menu-absent-btn" class="btn-primary modal-action">
-          Mark Bowler Absent
-        </button>
-        <button id="menu-correct-btn" class="btn-secondary modal-action">
-          Score Correction
-        </button>
-        <button id="menu-skip-btn" class="btn-secondary modal-action">
-          Skip Bowler / Next Bowler
-        </button>
+        <button id="menu-absent-btn" class="btn-primary modal-action">Toggle Current Bowler Absent</button>
+        <button id="menu-skip-btn" class="btn-secondary modal-action">Next / Skip Bowler</button>
+        <button id="menu-correct-btn" class="btn-secondary modal-action">Score Correction</button>
       </div>
       <div class="modal-footer">
-        <button id="menu-close-bottom-btn" class="btn-secondary small">
-          Close
-        </button>
+        <button id="menu-close-bottom-btn" class="btn-small btn-secondary">Close</button>
       </div>
     </div>
   </div>
