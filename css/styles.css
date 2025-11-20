@@ -411,3 +411,14 @@ main {
   text-decoration: line-through;
   color: #9ca3af;
 }
+.next-game-banner {
+  margin-bottom: 0.4rem;
+  padding: 0.35rem 0.6rem;
+  background: #1f2937;
+  border-radius: 4px;
+  text-align: center;
+  font-size: 0.95rem;
+  color: #facc15;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
