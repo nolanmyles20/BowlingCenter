@@ -1,10 +1,29 @@
 // js/frontdesk.js
 import { getLane, updateLane, listTeams, resetLane } from './state.js';
 
+const LEAGUES = [
+  'Open Bowling',
+  'Tuesday Mixed',
+  "Men\'s League",
+  "Women\'s League",
+  'Youth League'
+];
+
 let teamsCache = [];
+
+/* ---------------- helpers ---------------- */
 
 function loadTeams() {
   teamsCache = listTeams();
+}
+
+function buildLeagueOptions(selectedLeague) {
+  let html = '<option value="">-- None --</option>';
+  LEAGUES.forEach(lg => {
+    const sel = lg === selectedLeague ? ' selected' : '';
+    html += `<option value="${lg}"${sel}>${lg}</option>`;
+  });
+  return html;
 }
 
 function buildTeamOptions(selectedId) {
@@ -17,6 +36,8 @@ function buildTeamOptions(selectedId) {
   return html;
 }
 
+/* ---------------- render ---------------- */
+
 function renderLanes() {
   const tbody = document.getElementById('lanes-table-body');
   tbody.innerHTML = '';
@@ -26,6 +47,7 @@ function renderLanes() {
     const tr = document.createElement('tr');
     tr.dataset.laneId = laneId;
 
+    const leagueOptions = buildLeagueOptions(lane.league || '');
     const teamOptions = buildTeamOptions(lane.teamId);
 
     tr.innerHTML = `
@@ -36,7 +58,9 @@ function renderLanes() {
         </button>
       </td>
       <td>
-        <input class="lane-league-input" value="${lane.league || ''}" />
+        <select class="lane-league-select">
+          ${leagueOptions}
+        </select>
       </td>
       <td>
         <select class="lane-mode-select">
@@ -61,55 +85,77 @@ function renderLanes() {
   attachLaneHandlers();
 }
 
+/* ---------------- events ---------------- */
+
 function attachLaneHandlers() {
   document.querySelectorAll('#lanes-table-body tr').forEach(row => {
     const laneId = Number(row.dataset.laneId);
     const statusBtn = row.querySelector('.btn-status');
-    const leagueInput = row.querySelector('.lane-league-input');
+    const leagueSelect = row.querySelector('.lane-league-select');
     const modeSelect = row.querySelector('.lane-mode-select');
     const teamSelect = row.querySelector('.lane-team-select');
     const openBtn = row.querySelector('.btn-open');
     const resetBtn = row.querySelector('.btn-reset');
 
-    statusBtn.onclick = () => {
+    // Toggle Active/Inactive
+    statusBtn.onclick = (e) => {
+      e.stopPropagation();
       const lane = getLane(laneId);
       updateLane(laneId, { active: !lane.active });
       renderLanes();
     };
 
-    leagueInput.onchange = () => {
-      updateLane(laneId, { league: leagueInput.value.trim() });
+    // League dropdown change
+    leagueSelect.onchange = (e) => {
+      e.stopPropagation();
+      updateLane(laneId, { league: leagueSelect.value });
     };
 
-    modeSelect.onchange = () => {
+    // Mode change
+    modeSelect.onchange = (e) => {
+      e.stopPropagation();
       updateLane(laneId, { mode: modeSelect.value });
       renderLanes();
     };
 
-    teamSelect.onchange = () => {
+    // Team change → assigns roster to that lane
+    teamSelect.onchange = (e) => {
+      e.stopPropagation();
       const val = teamSelect.value;
       const teamId = val ? Number(val) : null;
-      // when team changes, clear players so lane will sync new team on open
       updateLane(laneId, {
         teamId,
-        players: [],
+        players: [],          // clear cached players; lane.js / state.js will rebuild from team
         currentPlayerIndex: 0
       });
       renderLanes();
     };
 
-    openBtn.onclick = () => {
+    // Open lane button
+    openBtn.onclick = (e) => {
+      e.stopPropagation();
       window.location.href = `lane.html?lane=${laneId}`;
     };
 
-    resetBtn.onclick = () => {
+    // Reset game
+    resetBtn.onclick = (e) => {
+      e.stopPropagation();
       if (confirm(`Reset game on Lane ${laneId}?`)) {
         resetLane(laneId);
         renderLanes();
       }
     };
+
+    // Clicking the whole row (except on controls) opens lane
+    row.onclick = (e) => {
+      const tag = e.target.tagName.toLowerCase();
+      if (tag === 'button' || tag === 'select') return;
+      window.location.href = `lane.html?lane=${laneId}`;
+    };
   });
 }
+
+/* ---------------- init ---------------- */
 
 document.addEventListener('DOMContentLoaded', () => {
   loadTeams();
