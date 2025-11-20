@@ -408,7 +408,10 @@ function renderScore(laneId) {
 
   scoreboard.appendChild(teamRow);
 
-  document.getElementById('total-score').textContent = teamScratchTotal;
+  const totalEl = document.getElementById('total-score');
+  if (totalEl) {
+    totalEl.textContent = teamScratchTotal;
+  }
 
   const toggleBtn = document.getElementById('view-toggle');
   toggleBtn.textContent =
