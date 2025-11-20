@@ -18,7 +18,8 @@ const DEFAULT_THEME = {
   accent: '#facc15',
   rowOdd: '#1e293b',
   rowEven: '#0f172a',
-  border: '#991b1b'
+  border: '#991b1b',
+  highlight: '#f97316' // active bowler glow
 };
 
 function loadTheme() {
@@ -39,6 +40,7 @@ function applyTheme(theme) {
   root.style.setProperty('--color-row-odd', t.rowOdd);
   root.style.setProperty('--color-row-even', t.rowEven);
   root.style.setProperty('--color-score-border', t.border);
+  root.style.setProperty('--color-highlight', t.highlight);
 }
 
 function saveTheme(theme) {
@@ -365,16 +367,27 @@ function renderScore(laneId) {
     const labelCell = document.createElement('div');
     labelCell.className = 'scoreboard-cell label-cell player-label-cell';
 
-    const arrow = p.isCurrent ? '▶ ' : '';
     const absentText = p.absent ? ' (ABS)' : '';
+
+    const arrowsHtml = p.isCurrent
+      ? `
+        <div class="current-arrows">
+          <span class="arrow-seg">➤</span>
+          <span class="arrow-seg">➤</span>
+          <span class="arrow-seg">➤</span>
+          <span class="arrow-seg">➤</span>
+        </div>
+      `
+      : '';
 
     labelCell.innerHTML = `
       <div class="player-name${p.absent ? ' absent' : ''}">
-        ${arrow}${p.name}${absentText}
+        ${p.name}${absentText}
       </div>
       <div class="player-total">
         HCP ${p.handicap || 0}
       </div>
+      ${arrowsHtml}
     `;
     row.appendChild(labelCell);
 
@@ -690,11 +703,13 @@ function openSettingsModal() {
   const rowOdd = document.getElementById('theme-row-odd');
   const rowEven = document.getElementById('theme-row-even');
   const border = document.getElementById('theme-border');
+  const highlight = document.getElementById('theme-highlight');
 
   if (accent) accent.value = theme.accent;
   if (rowOdd) rowOdd.value = theme.rowOdd;
   if (rowEven) rowEven.value = theme.rowEven;
   if (border) border.value = theme.border;
+  if (highlight) highlight.value = theme.highlight;
 
   const overlay = document.getElementById('settings-overlay');
   if (overlay) overlay.classList.remove('hidden');
@@ -710,12 +725,14 @@ function saveSettingsFromForm() {
   const rowOdd = document.getElementById('theme-row-odd');
   const rowEven = document.getElementById('theme-row-even');
   const border = document.getElementById('theme-border');
+  const highlight = document.getElementById('theme-highlight');
 
   const theme = {
     accent: accent?.value || DEFAULT_THEME.accent,
     rowOdd: rowOdd?.value || DEFAULT_THEME.rowOdd,
     rowEven: rowEven?.value || DEFAULT_THEME.rowEven,
-    border: border?.value || DEFAULT_THEME.border
+    border: border?.value || DEFAULT_THEME.border,
+    highlight: highlight?.value || DEFAULT_THEME.highlight
   };
 
   saveTheme(theme);
