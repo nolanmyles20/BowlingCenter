@@ -1,145 +1,85 @@
-/* ============================================================
-   THEME VARIABLES
-   ============================================================ */
-
-:root {
-  --color-bg-body: #020617;
-  --color-bg-panel: #020617;
-  --color-text: #e5e7eb;
-  --color-link: #38bdf8;
-
-  --color-accent: #facc15;
-  --color-row-odd: #1e293b;
-  --color-row-even: #0f172a;
-  --color-score-border: #991b1b;
-
-  /* active bowler highlight color */
-  --color-highlight: #f97316;
-}
-
-/* ============================================================
-   GLOBAL
-   ============================================================ */
-
-html, body {
-  height: 100%;
-  overflow-x: hidden;
-}
+/* GLOBAL */
 
 body {
   font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
   margin: 0;
   padding: 0;
-  background: var(--color-bg-body);
-  color: var(--color-text);
-}
-
-/* ============================================================
-   HEADER
-   ============================================================ */
-
-body.lane-body {
-  display: flex;
-  flex-direction: column;
-  min-height: 100vh;
+  background: #020617;
+  color: #e5e7eb;
 }
 
 .top-bar {
-  background: var(--color-bg-panel);
+  background: #020617;
   border-bottom: 2px solid #0f172a;
-  padding: 0.35rem 0.9rem;
+  padding: 0.5rem 1rem;
   display: flex;
+  flex-wrap: wrap;
   justify-content: space-between;
   align-items: center;
 }
 
 .top-bar h1 {
-  margin: 0.1rem 0;
-  font-size: 1.6rem;
+  margin: 0.2rem 0;
+  font-size: 1.5rem; /* bigger */
+  color: #e5e7eb;
 }
 
 nav.top-nav a {
-  margin-right: 0.7rem;
-  color: var(--color-link);
+  margin-right: 0.5rem;
+  color: #38bdf8;
   text-decoration: none;
-  font-size: 1rem;
+  font-size: 1rem; /* bigger */
 }
 
 nav.top-nav a:hover {
   text-decoration: underline;
 }
 
-/* ============================================================
-   MAIN LAYOUT (FLEX)
-   ============================================================ */
-
-main.lane-main {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  padding: 0.45rem 0.7rem 0.8rem;
-  gap: 0.4rem;
-  width: 100%;
+main {
+  padding: 1rem;
 }
 
-/* ============================================================
-   PANEL SHARED STYLE
-   ============================================================ */
-
 .panel {
-  background: var(--color-bg-panel);
+  background: #020617;
   border-radius: 6px;
-  padding: 0.5rem 0.65rem;
+  padding: 0.75rem 1rem;
+  margin-bottom: 0.9rem;
   border: 1px solid #0f172a;
 }
 
-/* ============================================================
-   STATUS ROW (compact)
-   ============================================================ */
+/* FORMS & BUTTONS */
 
-.lane-info-panel {
-  flex: 0 0 auto;
+.form-row {
   display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 0.25rem 1.5rem;
-  padding-top: 0.35rem;
-  padding-bottom: 0.35rem;
-  margin-bottom: 0.25rem;
+  flex-direction: column;
+  margin-bottom: 0.6rem;
 }
 
-.lane-info-line {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.25rem;
-  font-size: 1rem;
-  white-space: nowrap;
-}
-
-.lane-info-label {
+.form-row label {
+  margin-bottom: 0.2rem;
+  font-size: 0.95rem;
   color: #9ca3af;
-  font-weight: 600;
 }
 
-.lane-info-value {
-  color: var(--color-text);
+.form-row input,
+.form-row select {
+  padding: 0.4rem;
+  border-radius: 4px;
+  border: 1px solid #374151;
+  background: #020617;
+  color: #e5e7eb;
+  font-size: 0.95rem;
 }
 
-.game-switcher {
-  margin-left: auto;
-  display: flex;
-  gap: 0.3rem;
+.form-actions {
+  margin-top: 0.5rem;
 }
-
-/* ============================================================
-   BUTTONS / FORMS
-   ============================================================ */
 
 .btn-primary,
 .btn-secondary,
 .btn-small,
 .btn-pin {
-  padding: 0.32rem 0.7rem;
+  padding: 0.4rem 0.85rem;
   border-radius: 4px;
   border: none;
   cursor: pointer;
@@ -155,23 +95,23 @@ main.lane-main {
 
 .btn-secondary {
   background: #4b5563;
-  color: var(--color-text);
+  color: #e5e7eb;
 }
 
 .btn-secondary.small {
-  padding: 0.25rem 0.6rem;
+  padding: 0.3rem 0.7rem;
   font-size: 0.8rem;
 }
 
 .btn-small {
   background: #374151;
-  color: var(--color-text);
+  color: #e5e7eb;
 }
 
 .btn-pin {
   background: #1e293b;
-  color: var(--color-text);
-  min-width: 2.2rem;
+  color: #e5e7eb;
+  min-width: 2.4rem;
 }
 
 .btn-pin:hover,
@@ -181,193 +121,191 @@ main.lane-main {
   filter: brightness(1.2);
 }
 
-/* ============================================================
-   SCORING (FLEX — MAIN EXPANDING AREA)
-   ============================================================ */
+/* TABLES */
 
-.lane-controls-panel {
-  flex: 1 1 auto;
-  display: flex;
-  flex-direction: column;
-  margin-bottom: 0.25rem;
+.lanes-table,
+.bowler-table {
+  width: 100%;
+  border-collapse: collapse;
 }
 
-.lane-controls-header {
+.lanes-table th,
+.lanes-table td,
+.bowler-table th,
+.bowler-table td {
+  border: 1px solid #1f2937;
+  padding: 0.4rem;
+  text-align: left;
+  font-size: 0.9rem;
+}
+
+.lanes-table th,
+.bowler-table th {
+  background: #0f172a;
+}
+
+/* LANE SCREEN LAYOUT */
+
+.lane-body {
+  background: radial-gradient(circle at top, #0f172a 0, #020617 55%);
+}
+
+.lane-main {
+  max-width: 1080px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.lane-info-panel {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 0.25rem;
 }
 
-.lane-controls-panel h2 {
-  font-size: 1.1rem;
-  margin: 0;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
+.lane-controls-panel,
+.lane-pin-panel {
+  width: 100%;
 }
 
-/* ============================================================
-   SCOREBOARD — Flexible Height
-   ============================================================ */
+.lane-info-line {
+  display: flex;
+  gap: 0.4rem;
+  font-size: 0.98rem;
+}
+
+.lane-info-label {
+  color: #9ca3af;
+  font-weight: 500;
+}
+
+.lane-info-value {
+  color: #e5e7eb;
+}
+
+.game-switcher button {
+  margin-right: 0.25rem;
+}
+
+/* SCOREBOARD BASE */
 
 .scoreboard {
   width: 100%;
-  flex: 1 1 auto;
   border-radius: 6px;
   background: #020617;
-  border: 2px solid var(--color-score-border);
+  border: 2px solid var(--color-score-border, #991b1b);
   box-shadow: 0 0 20px rgba(0,0,0,0.6);
-  display: flex;
-  flex-direction: column;
-}
-
-.scoreboard-header {
-  flex: 0 0 auto;
-  background: #111827;
+  display: block;
 }
 
 .scoreboard-row {
   display: flex;
 }
 
-.player-row {
-  flex: 1 1 0;
-}
-
-/* grid cells */
-
 .scoreboard-cell {
-  padding: 4px 6px;
+  padding: 6px 8px;
   border-right: 1px solid #1f2937;
+  min-height: 52px; /* taller cells */
   display: flex;
   flex-direction: column;
   justify-content: center;
   align-items: center;
-  min-height: 0;
-  box-sizing: border-box;
 }
 
-.scoreboard-cell:last-child {
-  border-right: none;
-}
-
-/* left label column */
-
+/* left label / bowler name column */
 .scoreboard .label-cell {
-  flex: 0 0 12%;
-  max-width: 12%;
-  min-width: 115px;
+  flex: 0 0 140px;      /* a bit wider */
+  max-width: 140px;
+  box-sizing: border-box;
   font-weight: 600;
-  background: #020617;
-  color: var(--color-text);
+  font-size: 1.05rem;   /* bigger */
+  color: #e5e7eb;
 }
 
-/* frame columns evenly expand */
-
+/* frame number cells and per-frame cells */
 .scoreboard .frame-number-cell,
 .scoreboard .player-frame-cell {
-  flex: 1 1 0;
-  min-width: 0;
+  flex: 1 0 40px;
+  min-width: 40px;
   text-align: center;
+  box-sizing: border-box;
+  font-size: 1.05rem;  /* bigger */
 }
 
-/* header frame numbers */
-
-.frame-number-cell {
-  font-size: 0.95rem;
-  font-weight: 700;
-  color: var(--color-text);
-}
-
-/* ============================================================
-   FRAME CONTENT LAYOUT
-   ============================================================ */
-
-.frame-score {
-  font-size: 1.35rem;
-  font-weight: 700;
-  color: var(--color-accent);
-  line-height: 1.1;
-}
-
-.rolls-row {
-  display: flex;
-  justify-content: center;
-  gap: 0.4rem;
-  margin-top: 0.1rem;
-}
-
-.roll {
-  font-size: 0.85rem;
-  font-weight: 600;
-  color: #fee2e2;
-  min-width: 0.7rem;
-}
-
-/* ============================================================
-   PLAYER ROW COLORS AND ACTIVE FLASH
-   ============================================================ */
+/* player rows */
 
 .player-row:nth-child(odd) {
-  background: var(--color-row-odd);
+  background: var(--color-row-odd, #1e293b);
 }
 
 .player-row:nth-child(even) {
-  background: var(--color-row-even);
+  background: var(--color-row-even, #0f172a);
 }
 
 .player-label-cell {
   align-items: flex-start;
-  padding-left: 0.7rem;
+  padding-left: 0.5rem;
 }
 
 .player-name {
-  font-size: 1.05rem;
-  font-weight: 700;
+  font-size: 1rem;
+  font-weight: 600;
+  color: #e5e7eb;
 }
 
 .player-total {
   font-size: 0.9rem;
-  color: var(--color-accent);
+  color: #facc15;
 }
+
+/* active row highlight + pulse */
 
 .player-row.current {
-  position: relative;
-  background: #1e293b;
-  box-shadow: 0 0 18px var(--color-highlight);
-  z-index: 1;
-  animation: currentPulse 0.9s infinite alternate;
-}
-
-.player-name.absent {
-  text-decoration: line-through;
-  color: #9ca3af;
+  outline: 3px solid var(--color-highlight, #f97316);
+  outline-offset: -3px;
+  animation: currentPulse 1s infinite alternate;
 }
 
 @keyframes currentPulse {
-  from {
-    box-shadow: 0 0 8px var(--color-highlight);
-    filter: brightness(1);
-  }
-  to {
-    box-shadow: 0 0 28px var(--color-highlight);
-    filter: brightness(1.2);
-  }
+  from { filter: brightness(1); }
+  to   { filter: brightness(1.4); }
 }
 
-/* Arrow row under HCP for active bowler */
+/* Frame contents */
+
+.frame-score {
+  font-size: 1.6rem;      /* big primary number */
+  font-weight: 700;
+  color: #fee2e2;
+  line-height: 1.1;
+}
+
+.rolls-row {
+  margin-top: 2px;
+  display: flex;
+  gap: 0.4rem;
+}
+
+.roll {
+  font-size: 0.9rem;      /* smaller than frame-score */
+  font-weight: 500;
+  color: #e5e7eb;
+}
+
+/* arrows under active bowler */
 
 .current-arrows {
-  margin-top: 0.2rem;
   display: flex;
-  gap: 0.18rem;
+  gap: 0.35rem;
+  margin-top: 0.25rem;
+  font-size: 1.2rem;       /* bigger arrows */
 }
 
 .current-arrows .arrow-seg {
-  font-size: 0.95rem;
-  color: var(--color-highlight);
-  opacity: 0.2;
-  animation: arrowPulse 0.9s infinite;
+  color: var(--color-highlight, #f97316);
+  opacity: 0.25;
+  animation: arrowPulse 0.8s infinite;
 }
 
 .current-arrows .arrow-seg:nth-child(1) { animation-delay: 0s; }
@@ -377,28 +315,10 @@ main.lane-main {
 
 @keyframes arrowPulse {
   0%   { opacity: 0.2; transform: translateY(0); }
-  50%  { opacity: 1;   transform: translateY(-2px); }
-  100% { opacity: 0.2; transform: translateY(0); }
+  100% { opacity: 1;   transform: translateY(-2px); }
 }
 
-/* ============================================================
-   ENTER ROLL SECTION
-   ============================================================ */
-
-.lane-pin-panel {
-  flex: 0 0 auto;
-  padding-top: 0.35rem;
-  padding-bottom: 0.35rem;
-  margin-bottom: 0.25rem;
-}
-
-.lane-pin-panel h2 {
-  font-size: 1rem;
-  margin-top: 0;
-  margin-bottom: 0.3rem;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-}
+/* PINS BUTTONS */
 
 .pins-buttons {
   display: flex;
@@ -406,44 +326,16 @@ main.lane-main {
   gap: 0.25rem;
 }
 
-/* ============================================================
-   SERIES RECAP
-   ============================================================ */
+/* MODALS */
 
-.lane-recap-panel {
-  flex: 0 0 auto;
-  padding-top: 0.35rem;
-  padding-bottom: 0.35rem;
+.hidden {
+  display: none !important;
 }
-
-.lane-recap-panel h3 {
-  font-size: 0.95rem;
-  margin: 0 0 0.35rem 0;
-}
-
-.recap-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 0.8rem;
-}
-
-.recap-table th,
-.recap-table td {
-  border: 1px solid #1f2937;
-  padding: 0.25rem 0.35rem;
-  text-align: center;
-}
-
-/* ============================================================
-   MODALS
-   ============================================================ */
-
-.hidden { display: none !important; }
 
 .modal-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(15,23,42,0.75);
+  background: rgba(15, 23, 42, 0.75);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -451,9 +343,10 @@ main.lane-main {
 }
 
 .modal-window {
-  background: var(--color-bg-panel);
+  background: #020617;
   border-radius: 8px;
   border: 1px solid #1f2937;
+  box-shadow: 0 20px 40px rgba(0,0,0,0.8);
   padding: 0.75rem 1rem 0.8rem;
   min-width: 260px;
   max-width: 340px;
@@ -473,32 +366,48 @@ main.lane-main {
   margin-bottom: 0.6rem;
 }
 
+.settings-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.35rem 0.75rem;
+}
+
+.settings-grid label {
+  font-size: 0.85rem;
+}
+
+.modal-action {
+  width: 100%;
+  text-align: left;
+  justify-content: flex-start;
+}
+
 .modal-footer {
   display: flex;
   justify-content: flex-end;
 }
 
-.settings-grid {
-  display: grid;
-  grid-template-columns: 1.5fr 1fr;
-  gap: 0.4rem 0.6rem;
-}
-
-/* ============================================================
-   RESPONSIVE
-   ============================================================ */
+/* RESPONSIVE */
 
 @media (max-width: 800px) {
-  .scoreboard .label-cell {
-    min-width: 85px;
-    flex: 0 0 85px;
+  .lane-main {
+    padding: 0 0.25rem;
   }
 
-  .player-name {
+  .scoreboard .label-cell {
+    flex-basis: 120px;
+    max-width: 120px;
+  }
+
+  .scoreboard .frame-number-cell,
+  .scoreboard .player-frame-cell {
     font-size: 0.95rem;
   }
+}
 
-  .frame-score {
-    font-size: 1.1rem;
-  }
+/* absent styling */
+
+.player-name.absent {
+  text-decoration: line-through;
+  color: #9ca3af;
 }
