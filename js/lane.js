@@ -141,7 +141,9 @@ function getCurrentFrameForLane(lane) {
 
 // Is the current game fully complete for all players on this lane?
 function isGameFullyComplete(lane) {
-  const players = lane.players || [];
+  // Only consider non-absent bowlers when deciding if game is complete
+  const allPlayers = lane.players || [];
+  const players = allPlayers.filter(p => p && !p.absent);
   if (!players.length) return false;
 
   const gIndex = Math.max(0, Math.min(2, (lane.currentGame || 1) - 1));
