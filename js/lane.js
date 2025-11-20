@@ -1,5 +1,12 @@
 // js/lane.js
-import { getLane, updateLane, getState } from './state.js';
+import {
+  getLane,
+  getState,
+  saveState,
+  addRollForCurrentPlayer,
+  toggleCurrentPlayerAbsent,
+  advanceToNextPlayer
+} from './state.js';
 import { scoreGame } from './scoring.js';
 
 const VIEW_MODE_KEY_PREFIX = 'lane_view_mode_'; // per lane: 'full' or 'compact'
@@ -19,6 +26,10 @@ function setViewMode(laneId, mode) {
   const key = VIEW_MODE_KEY_PREFIX + laneId;
   localStorage.setItem(key, mode);
 }
+
+/* ---------------------------------------------------------
+   PIN BUTTONS
+--------------------------------------------------------- */
 
 function renderPinButtons(lane) {
   const container = document.getElementById('pin-buttons');
@@ -41,24 +52,26 @@ function handleRoll(laneId, pins) {
 
   let effectivePins = pins;
 
-  // Simple 9-pin no-tap: if first ball of frame and 9, treat as strike 10
+  // Simple 9-pin no-tap logic
   if (lane.mode === '9pin') {
-    const ballsSoFar = lane.rolls.length;
+    const players = lane.players || [];
+    const idx = lane.currentPlayerIndex || 0;
+    const player = players[idx] || { rolls: [] };
+    const ballsSoFar = (player.rolls || []).length;
     const frameRollCount = ballsSoFar % 2;
     if (frameRollCount === 0 && pins === 9) {
       effectivePins = 10;
     }
   }
 
-  const newRolls = lane.rolls.concat(effectivePins);
-  updateLane(laneId, { rolls: newRolls });
-
+  addRollForCurrentPlayer(laneId, effectivePins);
   renderScore(laneId);
 }
 
-/* ---------- SCORING GRID ---------- */
+/* ---------------------------------------------------------
+   SCORING GRID
+--------------------------------------------------------- */
 
-// Fill out 10 frames even if some are not played yet
 function buildFullFrames(frames) {
   const full = [];
   for (let i = 1; i <= 10; i++) {
@@ -82,9 +95,8 @@ function buildFullFrames(frames) {
   return full;
 }
 
-// Turn pin counts into X, /, -, etc
 function formatFrameRolls(frameIndex, frame) {
-  const rolls = frame.rolls;
+  const rolls = frame.rolls || [];
 
   // Frames 1–9
   if (frameIndex < 9) {
@@ -104,7 +116,7 @@ function formatFrameRolls(frameIndex, frame) {
     return [firstVal, secondVal];
   }
 
-  // 10th frame (up to 3 balls)
+  // 10th frame
   const symbols = rolls.map((r, i) => {
     if (r === 10) return 'X';
     if (i > 0 && (rolls[i - 1] ?? 0) + r === 10) return '/';
@@ -116,24 +128,47 @@ function formatFrameRolls(frameIndex, frame) {
 
 function renderScore(laneId) {
   const lane = getLane(laneId);
-  const scoring = scoreGame(lane.rolls);
   const viewMode = getViewMode(laneId);
-
-  // Always build 10 frames, even with no rolls yet
-  const fullFrames = buildFullFrames(scoring.frames);
-
-  // Decide which frames to show: 10 or last 4
-  let visibleFrames;
-  if (viewMode === 'compact') {
-    visibleFrames = fullFrames.slice(6); // frames 7–10
-  } else {
-    visibleFrames = fullFrames;          // frames 1–10
-  }
 
   const scoreboard = document.getElementById('scoreboard');
   scoreboard.innerHTML = '';
 
-  // ---- Header row (frame numbers) ----
+  const playersSrc = lane.players || [];
+  const players = [];
+
+  // Up to 4 players
+  for (let i = 0; i < 4; i++) {
+    const src = playersSrc[i];
+    if (src) {
+      const scoring = scoreGame(src.rolls || []);
+      const fullFrames = buildFullFrames(scoring.frames);
+      players.push({
+        name: src.name || `Player ${i + 1}`,
+        handicap: src.handicap || 0,
+        absent: !!src.absent,
+        isCurrent: i === (lane.currentPlayerIndex || 0),
+        scoring,
+        fullFrames
+      });
+    } else {
+      const scoring = scoreGame([]);
+      const fullFrames = buildFullFrames([]);
+      players.push({
+        name: `Player ${i + 1}`,
+        handicap: 0,
+        absent: false,
+        isCurrent: false,
+        scoring,
+        fullFrames
+      });
+    }
+  }
+
+  // Header frames from Player 1
+  const headerFrames = players[0].fullFrames;
+  const visibleFramesHeader =
+    viewMode === 'compact' ? headerFrames.slice(6) : headerFrames;
+
   const headerRow = document.createElement('div');
   headerRow.className = 'scoreboard-row scoreboard-header';
 
@@ -142,7 +177,7 @@ function renderScore(laneId) {
   gameLabel.textContent = 'Game 1';
   headerRow.appendChild(gameLabel);
 
-  visibleFrames.forEach(frame => {
+  visibleFramesHeader.forEach(frame => {
     const cell = document.createElement('div');
     cell.className = 'scoreboard-cell frame-number-cell';
     cell.textContent = frame.frame;
@@ -151,34 +186,32 @@ function renderScore(laneId) {
 
   scoreboard.appendChild(headerRow);
 
-  // For now we support 4 player slots visually
-  const players = [
-    { name: 'Player 1', frames: fullFrames },
-    { name: 'Player 2', frames: fullFrames.map(f => ({ ...f, rolls: [], running_total: null })) },
-    { name: 'Player 3', frames: fullFrames.map(f => ({ ...f, rolls: [], running_total: null })) },
-    { name: 'Player 4', frames: fullFrames.map(f => ({ ...f, rolls: [], running_total: null })) }
-  ];
-
-  players.forEach((player, pIndex) => {
+  /* ---------- Player Rows ---------- */
+  players.forEach((p) => {
     const row = document.createElement('div');
     row.className = 'scoreboard-row player-row';
+    if (p.isCurrent) row.classList.add('current');
 
     const labelCell = document.createElement('div');
     labelCell.className = 'scoreboard-cell label-cell player-label-cell';
+
+    const arrow = p.isCurrent ? '▶ ' : '';
+    const absentText = p.absent ? ' (ABS)' : '';
+
     labelCell.innerHTML = `
-      <div class="player-name">${player.name}</div>
-      <div class="player-total">${
-        pIndex === 0 && scoring.total ? scoring.total : '&nbsp;'
-      }</div>
+      <div class="player-name${p.absent ? ' absent' : ''}">
+        ${arrow}${p.name}${absentText}
+      </div>
+      <div class="player-total">
+        ${p.scoring.total || 0}${p.handicap ? ' +H' + p.handicap : ''}
+      </div>
     `;
     row.appendChild(labelCell);
 
-    const playerFrames = player.frames;
+    let framesToShow =
+      viewMode === 'compact' ? p.fullFrames.slice(6) : p.fullFrames;
 
-    // We need the same subset of frames as header
-    const allFrames = viewMode === 'compact' ? playerFrames.slice(6) : playerFrames;
-
-    allFrames.forEach((frame, idx) => {
+    framesToShow.forEach((frame) => {
       const cell = document.createElement('div');
       cell.className = 'scoreboard-cell player-frame-cell';
 
@@ -197,19 +230,21 @@ function renderScore(laneId) {
     scoreboard.appendChild(row);
   });
 
-  // Game total (same as Player 1 total for now)
-  document.getElementById('total-score').textContent = scoring.total || 0;
+  // Scratch team total
+  const teamTotal = players
+    .filter(p => !p.absent)
+    .reduce((sum, p) => sum + (p.scoring.total || 0), 0);
 
-  // Update toggle button text
+  document.getElementById('total-score').textContent = teamTotal;
+
   const toggleBtn = document.getElementById('view-toggle');
-  if (viewMode === 'full') {
-    toggleBtn.textContent = 'Show Last 4 Frames';
-  } else {
-    toggleBtn.textContent = 'Show All 10 Frames';
-  }
+  toggleBtn.textContent =
+    viewMode === 'full' ? 'Show Last 4 Frames' : 'Show All 10 Frames';
 }
 
-/* ---------- Lane info ---------- */
+/* ---------------------------------------------------------
+   LANE INFO HEADER
+--------------------------------------------------------- */
 
 function renderLaneInfo(laneId) {
   const lane = getLane(laneId);
@@ -221,29 +256,20 @@ function renderLaneInfo(laneId) {
 
   const leagueText = lane.league || 'None';
   const modeText = lane.mode === '9pin' ? '9-Pin No-Tap' : 'Standard';
-  const teamText = team ? `${team.name} (${team.league || 'No league'})` : 'None';
+  const teamText =
+    team ? `${team.name} (${team.league || 'No league'})` : 'None';
 
   info.innerHTML = `
-    <div class="lane-info-line">
-      <span class="lane-info-label">Status:</span>
-      <span class="lane-info-value">${lane.active ? 'Active' : 'Inactive'}</span>
-    </div>
-    <div class="lane-info-line">
-      <span class="lane-info-label">League:</span>
-      <span class="lane-info-value">${leagueText}</span>
-    </div>
-    <div class="lane-info-line">
-      <span class="lane-info-label">Mode:</span>
-      <span class="lane-info-value">${modeText}</span>
-    </div>
-    <div class="lane-info-line">
-      <span class="lane-info-label">Team:</span>
-      <span class="lane-info-value">${teamText}</span>
-    </div>
+    <div class="lane-info-line"><strong>Status:</strong> ${lane.active ? 'Active' : 'Inactive'}</div>
+    <div class="lane-info-line"><strong>League:</strong> ${leagueText}</div>
+    <div class="lane-info-line"><strong>Mode:</strong> ${modeText}</div>
+    <div class="lane-info-line"><strong>Team:</strong> ${teamText}</div>
   `;
 }
 
-/* -------- Lane Menu Logic (popup) -------- */
+/* ---------------------------------------------------------
+   MENU (ABSENT, SKIP, SCORE CORRECTION)
+--------------------------------------------------------- */
 
 function openMenu() {
   document.getElementById('lane-menu-overlay').classList.remove('hidden');
@@ -253,60 +279,68 @@ function closeMenu() {
   document.getElementById('lane-menu-overlay').classList.add('hidden');
 }
 
-// Very simple placeholder behaviors for now:
-
-function handleMarkAbsent() {
-  alert('Mark Bowler Absent – placeholder (we will hook into bowlers/teams next).');
+function handleMarkAbsent(laneId) {
+  toggleCurrentPlayerAbsent(laneId);
+  renderScore(laneId);
 }
 
-function handleSkipBowler() {
-  alert('Skip Bowler / Next Bowler – placeholder (per-bowler turn tracking comes next).');
+function handleSkipBowler(laneId) {
+  advanceToNextPlayer(laneId);
+  renderScore(laneId);
 }
 
 function handleScoreCorrection(laneId) {
   const lane = getLane(laneId);
-  if (!lane.rolls.length) {
-    alert('No rolls yet for this lane.');
+  const players = lane.players || [];
+  if (!players.length) {
+    alert('No players on lane');
     return;
   }
 
-  const totalRolls = lane.rolls.length;
-  const idxStr = prompt(`Score Correction:\nEnter roll number to change (1–${totalRolls})`);
-  if (!idxStr) return;
-  const idx = Number(idxStr);
-  if (!Number.isInteger(idx) || idx < 1 || idx > totalRolls) {
-    alert('Invalid roll number.');
+  const idx = lane.currentPlayerIndex || 0;
+  const player = players[idx];
+  const rolls = player.rolls || [];
+  if (!rolls.length) {
+    alert('This bowler has no rolls yet');
     return;
   }
 
-  const currentValue = lane.rolls[idx - 1];
-  const newStr = prompt(`Current value is ${currentValue}. Enter new pin count (0–10):`);
-  if (newStr === null) return;
-  const newVal = Number(newStr);
-  if (!Number.isInteger(newVal) || newVal < 0 || newVal > 10) {
-    alert('Invalid pin count.');
+  const rollNum = prompt(`Enter roll number to change (1–${rolls.length})`);
+  if (!rollNum) return;
+
+  const index = Number(rollNum);
+  if (isNaN(index) || index < 1 || index > rolls.length) {
+    alert('Invalid roll number');
     return;
   }
 
-  const newRolls = [...lane.rolls];
-  newRolls[idx - 1] = newVal;
-  updateLane(laneId, { rolls: newRolls });
+  const newVal = prompt(`Enter new pin count (0–10)`);
+  if (newVal === null) return;
+
+  const pins = Number(newVal);
+  if (isNaN(pins) || pins < 0 || pins > 10) {
+    alert('Invalid pin count');
+    return;
+  }
+
+  player.rolls[index - 1] = pins;
+  saveState();
   renderScore(laneId);
 }
+
+/* ---------------------------------------------------------
+   INIT
+--------------------------------------------------------- */
 
 document.addEventListener('DOMContentLoaded', () => {
   const laneId = getLaneIdFromQuery();
   const lane = getLane(laneId);
-  if (!lane) {
-    alert('Invalid lane');
-    return;
-  }
 
   renderLaneInfo(laneId);
   renderPinButtons(lane);
   renderScore(laneId);
 
-  // Frame view toggle
+  // View toggle
   const toggleBtn = document.getElementById('view-toggle');
   toggleBtn.addEventListener('click', () => {
     const current = getViewMode(laneId);
@@ -315,35 +349,19 @@ document.addEventListener('DOMContentLoaded', () => {
     renderScore(laneId);
   });
 
-  // Menu button + modal
-  const menuBtn = document.getElementById('lane-menu-btn');
-  const menuOverlay = document.getElementById('lane-menu-overlay');
-  const menuCloseTop = document.getElementById('menu-close-btn');
-  const menuCloseBottom = document.getElementById('menu-close-bottom-btn');
-  const absentBtn = document.getElementById('menu-absent-btn');
-  const correctBtn = document.getElementById('menu-correct-btn');
-  const skipBtn = document.getElementById('menu-skip-btn');
+  // Menu bindings
+  document.getElementById('lane-menu-btn').addEventListener('click', openMenu);
+  document.getElementById('menu-close-btn').addEventListener('click', closeMenu);
+  document.getElementById('menu-close-bottom-btn').addEventListener('click', closeMenu);
 
-  menuBtn.addEventListener('click', openMenu);
-  menuCloseTop.addEventListener('click', closeMenu);
-  menuCloseBottom.addEventListener('click', closeMenu);
+  document.getElementById('menu-absent-btn').addEventListener('click', () => handleMarkAbsent(laneId));
+  document.getElementById('menu-correct-btn').addEventListener('click', () => handleScoreCorrection(laneId));
+  document.getElementById('menu-skip-btn').addEventListener('click', () => handleSkipBowler(laneId));
 
-  // Click outside window closes menu
-  menuOverlay.addEventListener('click', (e) => {
-    if (e.target === menuOverlay) {
+  // Click outside modal closes it
+  document.getElementById('lane-menu-overlay').addEventListener('click', (e) => {
+    if (e.target.id === 'lane-menu-overlay') {
       closeMenu();
     }
-  });
-
-  absentBtn.addEventListener('click', () => {
-    handleMarkAbsent();
-  });
-
-  correctBtn.addEventListener('click', () => {
-    handleScoreCorrection(laneId);
-  });
-
-  skipBtn.addEventListener('click', () => {
-    handleSkipBowler();
   });
 });
