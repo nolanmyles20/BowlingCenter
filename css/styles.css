@@ -1,5 +1,10 @@
 /* GLOBAL */
 
+html,
+body {
+  height: 100%;
+}
+
 body {
   font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
   margin: 0;
@@ -20,7 +25,7 @@ body {
 
 .top-bar h1 {
   margin: 0.2rem 0;
-  font-size: 1.5rem;
+  font-size: 1.5rem; /* bigger */
   color: #e5e7eb;
 }
 
@@ -28,7 +33,7 @@ nav.top-nav a {
   margin-right: 0.5rem;
   color: #38bdf8;
   text-decoration: none;
-  font-size: 1rem;
+  font-size: 1rem; /* bigger */
 }
 
 nav.top-nav a:hover {
@@ -36,14 +41,16 @@ nav.top-nav a:hover {
 }
 
 main {
-  padding: 1rem 0;
+  padding: 1rem;
 }
+
+/* PANELS */
 
 .panel {
   background: #020617;
   border-radius: 6px;
-  padding: 0.75rem 1rem;
-  margin-bottom: 0.6rem;
+  padding: 0.6rem 0.75rem;
+  margin-bottom: 0.5rem;
   border: 1px solid #0f172a;
 }
 
@@ -150,36 +157,37 @@ main {
   background: radial-gradient(circle at top, #0f172a 0, #020617 55%);
 }
 
-/* full width, no max-width, centered padding */
+/* full width + full height layout for lane screen */
 .lane-main {
   width: 100%;
-  box-sizing: border-box;
-  padding: 0 1.5rem 1rem;
+  max-width: none;
   margin: 0 auto;
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
+  min-height: calc(100vh - 60px); /* 60px ~= header bar */
+  box-sizing: border-box;
 }
 
+/* compact single-row status / league / mode / team */
 .lane-info-panel {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  gap: 0.75rem;
+  gap: 1rem;
 }
 
-/* make the Status / League / Mode / Team row horizontal */
 #lane-info {
   display: flex;
   flex-wrap: wrap;
   gap: 0.9rem;
-  align-items: baseline;
 }
 
 .lane-info-line {
   display: flex;
-  gap: 0.25rem;
+  gap: 0.35rem;
   font-size: 0.98rem;
+  align-items: baseline;
 }
 
 .lane-info-label {
@@ -195,9 +203,27 @@ main {
   margin-right: 0.25rem;
 }
 
-.lane-controls-panel,
+/* let the scoring panel grow to fill height */
+.lane-controls-panel {
+  width: 100%;
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+}
+
+/* pin panel stays compact under grid */
 .lane-pin-panel {
   width: 100%;
+}
+
+/* hide "Enter Roll" heading text (we keep the buttons) */
+.lane-pin-panel h2 {
+  display: none;
+}
+
+/* hide recap table on lane screen – we'll show it only in popups */
+.lane-recap-panel {
+  display: none;
 }
 
 /* SCOREBOARD BASE */
@@ -207,18 +233,20 @@ main {
   border-radius: 6px;
   background: #020617;
   border: 2px solid var(--color-score-border, #991b1b);
-  box-shadow: 0 0 20px rgba(0,0,0,0.6);
+  box-shadow: 0 0 20px rgba(0, 0, 0, 0.6);
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;           /* stretch vertically in the panel */
 }
 
-/* prevent horizontal scrollbars */
 .scoreboard-row {
   display: flex;
 }
 
 .scoreboard-cell {
-  padding: 6px 8px;
+  padding: 8px 10px;
   border-right: 1px solid #1f2937;
-  min-height: 52px;
+  min-height: 68px;         /* taller cells so grid uses more height */
   display: flex;
   flex-direction: column;
   justify-content: center;
@@ -227,11 +255,11 @@ main {
 
 /* left label / bowler name column */
 .scoreboard .label-cell {
-  flex: 0 0 140px;
+  flex: 0 0 140px;      /* a bit wider */
   max-width: 140px;
   box-sizing: border-box;
   font-weight: 600;
-  font-size: 1.05rem;
+  font-size: 1.05rem;   /* bigger */
   color: #e5e7eb;
 }
 
@@ -242,7 +270,7 @@ main {
   min-width: 40px;
   text-align: center;
   box-sizing: border-box;
-  font-size: 1.05rem;
+  font-size: 1.05rem;  /* bigger */
 }
 
 /* player rows */
@@ -280,14 +308,18 @@ main {
 }
 
 @keyframes currentPulse {
-  from { filter: brightness(1); }
-  to   { filter: brightness(1.4); }
+  from {
+    filter: brightness(1);
+  }
+  to {
+    filter: brightness(1.4);
+  }
 }
 
 /* Frame contents */
 
 .frame-score {
-  font-size: 1.6rem;
+  font-size: 1.6rem;      /* big primary number */
   font-weight: 700;
   color: #fee2e2;
   line-height: 1.1;
@@ -300,7 +332,7 @@ main {
 }
 
 .roll {
-  font-size: 0.9rem;
+  font-size: 0.9rem;      /* smaller than frame-score */
   font-weight: 500;
   color: #e5e7eb;
 }
@@ -311,7 +343,7 @@ main {
   display: flex;
   gap: 0.35rem;
   margin-top: 0.25rem;
-  font-size: 1.2rem;
+  font-size: 1.2rem;       /* bigger arrows */
 }
 
 .current-arrows .arrow-seg {
@@ -320,14 +352,28 @@ main {
   animation: arrowPulse 0.8s infinite;
 }
 
-.current-arrows .arrow-seg:nth-child(1) { animation-delay: 0s; }
-.current-arrows .arrow-seg:nth-child(2) { animation-delay: 0.15s; }
-.current-arrows .arrow-seg:nth-child(3) { animation-delay: 0.3s; }
-.current-arrows .arrow-seg:nth-child(4) { animation-delay: 0.45s; }
+.current-arrows .arrow-seg:nth-child(1) {
+  animation-delay: 0s;
+}
+.current-arrows .arrow-seg:nth-child(2) {
+  animation-delay: 0.15s;
+}
+.current-arrows .arrow-seg:nth-child(3) {
+  animation-delay: 0.3s;
+}
+.current-arrows .arrow-seg:nth-child(4) {
+  animation-delay: 0.45s;
+}
 
 @keyframes arrowPulse {
-  0%   { opacity: 0.2; transform: translateY(0); }
-  100% { opacity: 1;   transform: translateY(-2px); }
+  0% {
+    opacity: 0.2;
+    transform: translateY(0);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(-2px);
+  }
 }
 
 /* PINS BUTTONS */
@@ -358,10 +404,10 @@ main {
   background: #020617;
   border-radius: 8px;
   border: 1px solid #1f2937;
-  box-shadow: 0 20px 40px rgba(0,0,0,0.8);
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.8);
   padding: 0.75rem 1rem 0.8rem;
   min-width: 260px;
-  max-width: 420px;
+  max-width: 340px;
 }
 
 .modal-header {
@@ -399,34 +445,16 @@ main {
   justify-content: flex-end;
 }
 
-/* recap table reused in modal */
-.recap-table {
-  width: 100%;
-  border-collapse: collapse;
-  margin-top: 0.25rem;
-}
-
-.recap-table th,
-.recap-table td {
-  border: 1px solid #1f2937;
-  padding: 0.25rem 0.35rem;
-  font-size: 0.85rem;
-  text-align: center;
-}
-
-.recap-table th {
-  background: #0f172a;
-}
-
 /* RESPONSIVE */
 
 @media (max-width: 800px) {
   .lane-main {
-    padding: 0 0.5rem 0.75rem;
+    padding: 0 0.25rem;
+    min-height: auto;
   }
 
   #lane-info {
-    gap: 0.45rem;
+    gap: 0.6rem;
   }
 
   .scoreboard .label-cell {
@@ -445,4 +473,18 @@ main {
 .player-name.absent {
   text-decoration: line-through;
   color: #9ca3af;
+}
+
+/* banner above grid when waiting to start next game */
+
+.next-game-banner {
+  margin-bottom: 0.4rem;
+  padding: 0.35rem 0.6rem;
+  background: #1f2937;
+  border-radius: 4px;
+  text-align: center;
+  font-size: 0.95rem;
+  color: #facc15;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
 }
