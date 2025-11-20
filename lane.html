@@ -18,6 +18,7 @@
   </header>
 
   <main class="lane-main">
+    <!-- Lane status / league / team -->
     <section class="panel lane-info-panel">
       <div id="lane-info"></div>
       <div class="game-switcher">
@@ -28,22 +29,22 @@
       <button id="view-toggle" class="btn-small">Show Last 4 Frames</button>
     </section>
 
+    <!-- SCOREBOARD: full-width -->
     <section class="panel lane-controls-panel">
       <div class="lane-controls-header">
         <h2>Scoring</h2>
       </div>
       <div id="scoreboard" class="scoreboard"></div>
-      <div class="lane-total-row">
-        <span class="lane-total-label">Team Scratch Total:</span>
-        <span id="total-score" class="lane-total-value">0</span>
-      </div>
+      <!-- external Team Scratch Total row REMOVED on purpose -->
     </section>
 
+    <!-- ENTER ROLL: directly under scoreboard -->
     <section class="panel lane-pin-panel">
       <h2>Enter Roll</h2>
       <div id="pin-buttons" class="pins-buttons"></div>
     </section>
 
+    <!-- 3-game series recap -->
     <section id="series-recap" class="panel lane-recap-panel">
       <!-- filled by JS -->
     </section>
@@ -57,12 +58,20 @@
         <button id="menu-close-btn" class="btn-small btn-secondary">X</button>
       </div>
       <div class="modal-body">
-        <button id="menu-absent-btn" class="btn-primary modal-action">Toggle Current Bowler Absent</button>
-        <button id="menu-skip-btn" class="btn-secondary modal-action">Next / Skip Bowler</button>
-        <button id="menu-correct-btn" class="btn-secondary modal-action">Score Correction</button>
+        <button id="menu-absent-btn" class="btn-primary modal-action">
+          Toggle Current Bowler Absent
+        </button>
+        <button id="menu-skip-btn" class="btn-secondary modal-action">
+          Next / Skip Bowler
+        </button>
+        <button id="menu-correct-btn" class="btn-secondary modal-action">
+          Score Correction
+        </button>
       </div>
       <div class="modal-footer">
-        <button id="menu-close-bottom-btn" class="btn-small btn-secondary">Close</button>
+        <button id="menu-close-bottom-btn" class="btn-small btn-secondary">
+          Close
+        </button>
       </div>
     </div>
   </div>
