@@ -56,15 +56,15 @@ nav.top-nav a:hover {
 }
 
 main {
-  padding: 0.5rem 0.75rem 1rem;
+  padding: 0.4rem 0.5rem 0.75rem;
   min-height: calc(100vh - 48px); /* fill height under header */
 }
 
 .panel {
   background: var(--color-bg-panel);
   border-radius: 6px;
-  padding: 0.6rem 0.75rem;
-  margin-bottom: 0.6rem;
+  padding: 0.5rem 0.6rem;
+  margin-bottom: 0.5rem;
   border: 1px solid #0f172a;
 }
 
@@ -173,12 +173,12 @@ main {
 
 .lane-main {
   width: 100%;
-  max-width: 1400px;
+  max-width: 100%;          /* let it span the whole screen */
   margin: 0 auto;
   display: grid;
   grid-template-columns: 2fr 1.2fr;
   grid-template-rows: auto auto;
-  gap: 0.6rem;
+  gap: 0.4rem;              /* tighter vertical spacing */
 }
 
 /* compact status row */
@@ -190,8 +190,9 @@ main {
   align-items: center;
   gap: 0.25rem 1.5rem;
   background: var(--color-bg-panel);
-  padding-top: 0.45rem;
-  padding-bottom: 0.45rem;
+  padding-top: 0.35rem;
+  padding-bottom: 0.35rem;
+  margin-bottom: 0.35rem;
 }
 
 .lane-info-line {
@@ -217,18 +218,19 @@ main {
   margin-left: auto;
 }
 
-/* scoreboard + enter-roll panels full width */
+/* scoreboard + enter-roll panels full width, compressed gaps */
 
 .lane-controls-panel {
   grid-column: 1 / 3;
   background: var(--color-bg-panel);
+  margin-bottom: 0.3rem;  /* smaller gap under grid */
 }
 
 .lane-controls-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 0.35rem;
+  margin-bottom: 0.25rem;
 }
 
 .lane-controls-panel h2,
@@ -243,6 +245,10 @@ main {
 .lane-pin-panel {
   grid-column: 1 / 3;
   background: var(--color-bg-panel);
+  margin-top: 0;
+  margin-bottom: 0.3rem;   /* pull Enter Roll up closer */
+  padding-top: 0.4rem;
+  padding-bottom: 0.4rem;
 }
 
 /* ---------------- SCOREBOARD ---------------- */
@@ -266,8 +272,13 @@ main {
   flex-direction: column;
   justify-content: center;
   align-items: center;
-  min-height: 40px;
+  min-height: 62px;       /* TALLER cells for readability */
   box-sizing: border-box;
+}
+
+/* header row slightly shorter */
+.scoreboard-header .scoreboard-cell {
+  min-height: 46px;
 }
 
 .scoreboard-cell:last-child {
@@ -276,18 +287,20 @@ main {
 
 /* left label / bowler name column */
 .scoreboard .label-cell {
-  flex: 0 0 130px;
-  max-width: 130px;
+  flex: 0 0 12%;          /* fixed ~12% width */
+  max-width: 12%;
+  min-width: 110px;
   font-weight: 600;
-  font-size: 0.85rem;
+  font-size: 0.9rem;
   background: #020617;
   color: var(--color-text);
 }
 
-/* frame number cells and per-frame cells */
+/* frame number cells and per-frame cells
+   fill the rest evenly with NO horizontal scroll */
 .scoreboard .frame-number-cell,
 .scoreboard .player-frame-cell {
-  flex: 1 1 0;        /* allow shrink, share remaining width */
+  flex: 1 1 0;
   min-width: 0;
   text-align: center;
 }
@@ -298,7 +311,7 @@ main {
 }
 
 .frame-number-cell {
-  font-size: 0.8rem;
+  font-size: 0.85rem;
   font-weight: 600;
   color: var(--color-text);
 }
@@ -315,11 +328,11 @@ main {
 
 .player-label-cell {
   align-items: flex-start;
-  padding-left: 0.5rem;
+  padding-left: 0.6rem;
 }
 
 .player-name {
-  font-size: 0.85rem;
+  font-size: 0.9rem;
   font-weight: 600;
   color: var(--color-text);
 }
@@ -336,11 +349,11 @@ main {
 
 .rolls-top {
   font-weight: 700;
-  font-size: 1rem;
+  font-size: 1.05rem;
 }
 
 .rolls-bottom {
-  font-size: 0.75rem;
+  font-size: 0.8rem;
   opacity: 0.85;
 }
 
@@ -458,12 +471,15 @@ main {
 
 .lane-recap-panel {
   grid-column: 1 / 3;
-  margin-top: 0.2rem;
+  margin-top: 0.15rem;
+  margin-bottom: 0.2rem;
+  padding-top: 0.4rem;
+  padding-bottom: 0.4rem;
 }
 
 .lane-recap-panel h3 {
   margin-top: 0;
-  margin-bottom: 0.4rem;
+  margin-bottom: 0.35rem;
   font-size: 0.9rem;
 }
 
@@ -476,7 +492,7 @@ main {
 .recap-table th,
 .recap-table td {
   border: 1px solid #1f2937;
-  padding: 0.3rem 0.4rem;
+  padding: 0.25rem 0.35rem;
   text-align: center;
 }
 
