@@ -1,6 +1,6 @@
 // js/state.js
 
-const STORAGE_KEY = 'bowling_state_v2';
+const STORAGE_KEY = 'bowling_state_v3';
 
 // ---------- helpers ----------
 
@@ -26,8 +26,9 @@ for (let i = 1; i <= 12; i++) {
     league: '',
     mode: 'standard', // or '9pin'
     teamId: null,
-    players: [],      // [{ bowlerId, name, handicap, absent, rolls: [] }]
-    currentPlayerIndex: 0
+    players: [],      // [{ bowlerId, name, handicap, absent, games:[{rolls:[]},{rolls:[]},{rolls:[]}]}]
+    currentPlayerIndex: 0,
+    currentGame: 1    // 1,2,3
   };
 }
 
@@ -50,6 +51,9 @@ function loadState() {
     }
     if (parsed.nextBowlerId) state.nextBowlerId = parsed.nextBowlerId;
     if (parsed.nextTeamId) state.nextTeamId = parsed.nextTeamId;
+
+    // normalize lanes
+    Object.values(state.lanes).forEach(normalizeLane);
 
     return state;
   } catch (e) {
@@ -76,39 +80,61 @@ function ensureLane(laneId) {
     state.lanes[key] = deepClone(DEFAULT_STATE.lanes['1']);
     state.lanes[key].id = laneId;
   }
-  const lane = state.lanes[key];
+  normalizeLane(state.lanes[key]);
+  return state.lanes[key];
+}
 
-  if (!Array.isArray(lane.players)) lane.players = [];
+function ensurePlayerGames(player) {
+  if (!Array.isArray(player.games) || player.games.length < 3) {
+    const existingRolls = Array.isArray(player.rolls) ? player.rolls : [];
+    const games = [
+      { rolls: [] },
+      { rolls: [] },
+      { rolls: [] }
+    ];
+    // migrate old single-game rolls into game 1 if present
+    if (existingRolls.length && (!player.games || !player.games.length)) {
+      games[0].rolls = existingRolls;
+    }
+    player.games = games;
+  }
+}
+
+function normalizeLane(lane) {
+  if (!lane) return;
   if (typeof lane.currentPlayerIndex !== 'number') lane.currentPlayerIndex = 0;
-
-  return lane;
+  if (!Array.isArray(lane.players)) lane.players = [];
+  if (typeof lane.currentGame !== 'number' || lane.currentGame < 1 || lane.currentGame > 3) {
+    lane.currentGame = 1;
+  }
+  lane.players.forEach(ensurePlayerGames);
 }
 
 function syncLanePlayersFromTeam(lane) {
-  if (!lane.teamId) {
-    return;
-  }
+  if (!lane.teamId) return;
 
   const team = state.teams[String(lane.teamId)];
-  if (!team || !Array.isArray(team.bowlerIds) || !team.bowlerIds.length) {
-    return;
-  }
+  if (!team || !Array.isArray(team.bowlerIds) || !team.bowlerIds.length) return;
 
   const roster = team.bowlerIds.slice(0, 4); // cap at 4
   lane.players = roster.map((bid, idx) => {
     const b = state.bowlers[String(bid)];
-    return {
+    const base = {
       bowlerId: bid,
       name: b ? b.name : `Bowler ${idx + 1}`,
       handicap: b ? (b.handicap || 0) : 0,
       absent: false,
-      rolls: []
+      games: [
+        { rolls: [] },
+        { rolls: [] },
+        { rolls: [] }
+      ]
     };
+    return base;
   });
   lane.currentPlayerIndex = 0;
 }
 
-// Check if lane players are synced with team roster
 function lanePlayersOutOfSync(lane) {
   if (!lane.teamId) return false;
 
@@ -118,12 +144,10 @@ function lanePlayersOutOfSync(lane) {
   const roster = team.bowlerIds.slice(0, 4);
   if (!roster.length) return false;
 
-  // If no players or lengths differ, out of sync
   if (!Array.isArray(lane.players) || lane.players.length !== roster.length) {
     return true;
   }
 
-  // If any bowlerId doesn't match the roster order, out of sync
   for (let i = 0; i < roster.length; i++) {
     if (lane.players[i].bowlerId !== roster[i]) {
       return true;
@@ -135,7 +159,6 @@ function lanePlayersOutOfSync(lane) {
 export function getLane(laneId) {
   const lane = ensureLane(laneId);
 
-  // If lane has a team and players are missing or not matching roster, resync
   if (lane.teamId && lanePlayersOutOfSync(lane)) {
     syncLanePlayersFromTeam(lane);
     saveState();
@@ -149,8 +172,8 @@ export function updateLane(laneId, patch) {
   const prevTeamId = lane.teamId;
 
   Object.assign(lane, patch);
+  normalizeLane(lane);
 
-  // If team changed, force resync from new team
   if (patch.teamId !== undefined && patch.teamId !== prevTeamId) {
     syncLanePlayersFromTeam(lane);
   }
@@ -159,10 +182,20 @@ export function updateLane(laneId, patch) {
   return lane;
 }
 
+function getCurrentGameIndex(lane) {
+  normalizeLane(lane);
+  let g = lane.currentGame || 1;
+  if (g < 1) g = 1;
+  if (g > 3) g = 3;
+  return g - 1;
+}
+
 export function resetLane(laneId) {
   const lane = ensureLane(laneId);
+  const gameIdx = getCurrentGameIndex(lane);
   lane.players.forEach(p => {
-    p.rolls = [];
+    ensurePlayerGames(p);
+    p.games[gameIdx].rolls = [];
   });
   lane.currentPlayerIndex = 0;
   saveState();
@@ -172,20 +205,30 @@ export function resetLane(laneId) {
 // used by lane.js
 export function addRollForCurrentPlayer(laneId, pins) {
   const lane = getLane(laneId);
+  const gameIdx = getCurrentGameIndex(lane);
+
   if (!lane.players.length) {
     lane.players = [{
       bowlerId: null,
       name: 'Player 1',
       handicap: 0,
       absent: false,
-      rolls: []
+      games: [
+        { rolls: [] },
+        { rolls: [] },
+        { rolls: [] }
+      ]
     }];
   }
+
   const idx = lane.currentPlayerIndex || 0;
   const player = lane.players[idx];
+  ensurePlayerGames(player);
+
   if (!player.absent) {
-    if (!Array.isArray(player.rolls)) player.rolls = [];
-    player.rolls.push(pins);
+    const game = player.games[gameIdx];
+    if (!Array.isArray(game.rolls)) game.rolls = [];
+    game.rolls.push(pins);
     saveState();
   }
 }
