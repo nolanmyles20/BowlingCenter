@@ -862,24 +862,19 @@ function renderLaneInfo(laneId) {
   const teamText =
     team ? `${team.name} (${team.league || 'No league'})` : 'None';
 
-  info.innerHTML = `
+   info.innerHTML = `
     <div class="lane-info-line">
       <span class="lane-info-label">Status:</span>
       <span class="lane-info-value">${lane.active ? 'Active' : 'Inactive'}</span>
-    </div>
-    <div class="lane-info-line">
       <span class="lane-info-label">League:</span>
       <span class="lane-info-value">${leagueText}</span>
-    </div>
-    <div class="lane-info-line">
       <span class="lane-info-label">Mode:</span>
       <span class="lane-info-value">${modeText}</span>
-    </div>
-    <div class="lane-info-line">
       <span class="lane-info-label">Team:</span>
       <span class="lane-info-value">${teamText}</span>
     </div>
   `;
+
 }
 
 /* ---------------------------------------------------------
