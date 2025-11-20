@@ -127,7 +127,7 @@ function renderScore(laneId) {
   rollsLabel.textContent = 'Rolls';
   rollsRow.appendChild(rollsLabel);
 
-  visibleFrames.forEach((frame, idx) => {
+  visibleFrames.forEach((frame) => {
     const cell = document.createElement('div');
     cell.className = 'scoreboard-cell frame-rolls-cell';
 
@@ -204,6 +204,57 @@ function renderLaneInfo(laneId) {
   `;
 }
 
+/* -------- Lane Menu Logic (popup) -------- */
+
+function openMenu() {
+  document.getElementById('lane-menu-overlay').classList.remove('hidden');
+}
+
+function closeMenu() {
+  document.getElementById('lane-menu-overlay').classList.add('hidden');
+}
+
+// Very simple placeholder behaviors for now:
+
+function handleMarkAbsent() {
+  alert('Mark Bowler Absent – placeholder (we will hook into bowlers/teams next).');
+}
+
+function handleSkipBowler() {
+  alert('Skip Bowler / Next Bowler – placeholder (per-bowler turn tracking comes next).');
+}
+
+function handleScoreCorrection(laneId) {
+  const lane = getLane(laneId);
+  if (!lane.rolls.length) {
+    alert('No rolls yet for this lane.');
+    return;
+  }
+
+  const totalRolls = lane.rolls.length;
+  const idxStr = prompt(`Score Correction:\nEnter roll number to change (1–${totalRolls})`);
+  if (!idxStr) return;
+  const idx = Number(idxStr);
+  if (!Number.isInteger(idx) || idx < 1 || idx > totalRolls) {
+    alert('Invalid roll number.');
+    return;
+  }
+
+  const currentValue = lane.rolls[idx - 1];
+  const newStr = prompt(`Current value is ${currentValue}. Enter new pin count (0–10):`);
+  if (newStr === null) return;
+  const newVal = Number(newStr);
+  if (!Number.isInteger(newVal) || newVal < 0 || newVal > 10) {
+    alert('Invalid pin count.');
+    return;
+  }
+
+  const newRolls = [...lane.rolls];
+  newRolls[idx - 1] = newVal;
+  updateLane(laneId, { rolls: newRolls });
+  renderScore(laneId);
+}
+
 document.addEventListener('DOMContentLoaded', () => {
   const laneId = getLaneIdFromQuery();
   const lane = getLane(laneId);
@@ -216,11 +267,45 @@ document.addEventListener('DOMContentLoaded', () => {
   renderPinButtons(lane);
   renderScore(laneId);
 
+  // Frame view toggle
   const toggleBtn = document.getElementById('view-toggle');
   toggleBtn.addEventListener('click', () => {
     const current = getViewMode(laneId);
     const next = current === 'full' ? 'compact' : 'full';
     setViewMode(laneId, next);
     renderScore(laneId);
+  });
+
+  // Menu button + modal
+  const menuBtn = document.getElementById('lane-menu-btn');
+  const menuOverlay = document.getElementById('lane-menu-overlay');
+  const menuCloseTop = document.getElementById('menu-close-btn');
+  const menuCloseBottom = document.getElementById('menu-close-bottom-btn');
+  const absentBtn = document.getElementById('menu-absent-btn');
+  const correctBtn = document.getElementById('menu-correct-btn');
+  const skipBtn = document.getElementById('menu-skip-btn');
+
+  menuBtn.addEventListener('click', openMenu);
+  menuCloseTop.addEventListener('click', closeMenu);
+  menuCloseBottom.addEventListener('click', closeMenu);
+
+  // Click outside window closes menu
+  menuOverlay.addEventListener('click', (e) => {
+    if (e.target === menuOverlay) {
+      closeMenu();
+    }
+  });
+
+  absentBtn.addEventListener('click', () => {
+    handleMarkAbsent();
+    // keep menu open for now
+  });
+
+  correctBtn.addEventListener('click', () => {
+    handleScoreCorrection(laneId);
+  });
+
+  skipBtn.addEventListener('click', () => {
+    handleSkipBowler();
   });
 });
