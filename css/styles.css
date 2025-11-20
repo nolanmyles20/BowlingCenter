@@ -397,3 +397,22 @@ main {
     grid-column: 1 / 2;
   }
 }
+.player-row.current {
+  outline: 2px solid #facc15;
+  outline-offset: -2px;
+  animation: currentPulse 1s infinite alternate;
+}
+
+.player-name.absent {
+  text-decoration: line-through;
+  color: #9ca3af;
+}
+
+@keyframes currentPulse {
+  from {
+    background-color: #111827;
+  }
+  to {
+    background-color: #1f2937;
+  }
+}
