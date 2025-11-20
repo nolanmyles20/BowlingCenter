@@ -43,6 +43,32 @@ function renderPinButtons(lane) {
   }
 }
 
+// Count how many frames (1–9) are fully completed in a roll sequence
+function countCompletedFrames9(rolls) {
+  let frame = 0;
+  let i = 0;
+  while (frame < 9 && i < rolls.length) {
+    const r = rolls[i];
+    if (r === 10) {
+      // strike, one-ball frame
+      frame += 1;
+      i += 1;
+    } else {
+      // need two balls for a full frame
+      if (i + 1 >= rolls.length) break; // incomplete frame waiting for 2nd ball
+      frame += 1;
+      i += 2;
+    }
+  }
+  return frame;
+}
+
+function didLastRollCompleteFrame(rollsBefore, rollsAfter) {
+  const beforeFrames = countCompletedFrames9(rollsBefore);
+  const afterFrames = countCompletedFrames9(rollsAfter);
+  return afterFrames > beforeFrames;
+}
+
 function handleRoll(laneId, pins) {
   const lane = getLane(laneId);
   if (!lane.active) {
@@ -50,21 +76,41 @@ function handleRoll(laneId, pins) {
     return;
   }
 
+  // Snapshot rolls for current player BEFORE this roll
+  const playersBefore = lane.players || [];
+  const currentIndex = lane.currentPlayerIndex || 0;
+  const currentPlayerBefore = playersBefore[currentIndex] || { rolls: [] };
+  const rollsBefore = Array.isArray(currentPlayerBefore.rolls)
+    ? [...currentPlayerBefore.rolls]
+    : [];
+
   let effectivePins = pins;
 
   // Simple 9-pin no-tap logic
   if (lane.mode === '9pin') {
-    const players = lane.players || [];
-    const idx = lane.currentPlayerIndex || 0;
-    const player = players[idx] || { rolls: [] };
-    const ballsSoFar = (player.rolls || []).length;
+    const ballsSoFar = rollsBefore.length;
     const frameRollCount = ballsSoFar % 2;
     if (frameRollCount === 0 && pins === 9) {
       effectivePins = 10;
     }
   }
 
+  // Add roll to current player
   addRollForCurrentPlayer(laneId, effectivePins);
+
+  // Get state AFTER roll
+  const laneAfter = getLane(laneId);
+  const playersAfter = laneAfter.players || [];
+  const currentPlayerAfter = playersAfter[currentIndex] || { rolls: [] };
+  const rollsAfter = Array.isArray(currentPlayerAfter.rolls)
+    ? currentPlayerAfter.rolls
+    : [];
+
+  // If this roll completed a frame (1–9), rotate to next player
+  if (didLastRollCompleteFrame(rollsBefore, rollsAfter)) {
+    advanceToNextPlayer(laneId);
+  }
+
   renderScore(laneId);
 }
 
@@ -116,7 +162,7 @@ function formatFrameRolls(frameIndex, frame) {
     return [firstVal, secondVal];
   }
 
-  // 10th frame
+  // 10th frame (up to 3 balls)
   const symbols = rolls.map((r, i) => {
     if (r === 10) return 'X';
     if (i > 0 && (rolls[i - 1] ?? 0) + r === 10) return '/';
@@ -136,10 +182,10 @@ function renderScore(laneId) {
   const playersSrc = lane.players || [];
   const players = [];
 
-  // Up to 4 players
+  // Build up to 4 visual rows
   for (let i = 0; i < 4; i++) {
-    const src = playersSrc[i];
-    if (src) {
+    if (i < playersSrc.length) {
+      const src = playersSrc[i];
       const scoring = scoreGame(src.rolls || []);
       const fullFrames = buildFullFrames(scoring.frames);
       players.push({
@@ -151,13 +197,14 @@ function renderScore(laneId) {
         fullFrames
       });
     } else {
+      // Extra slots beyond real team: show as ABSENT and skip in rotation (they're not in state)
       const scoring = scoreGame([]);
       const fullFrames = buildFullFrames([]);
       players.push({
         name: `Player ${i + 1}`,
         handicap: 0,
-        absent: false,
-        isCurrent: false,
+        absent: true,       // visually marked absent
+        isCurrent: false,   // never current (not in lane.players)
         scoring,
         fullFrames
       });
@@ -186,7 +233,7 @@ function renderScore(laneId) {
 
   scoreboard.appendChild(headerRow);
 
-  /* ---------- Player Rows ---------- */
+  // Player rows
   players.forEach((p) => {
     const row = document.createElement('div');
     row.className = 'scoreboard-row player-row';
@@ -230,7 +277,7 @@ function renderScore(laneId) {
     scoreboard.appendChild(row);
   });
 
-  // Scratch team total
+  // Scratch team total = sum of non-absent players' totals
   const teamTotal = players
     .filter(p => !p.absent)
     .reduce((sum, p) => sum + (p.scoring.total || 0), 0);
@@ -354,9 +401,15 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('menu-close-btn').addEventListener('click', closeMenu);
   document.getElementById('menu-close-bottom-btn').addEventListener('click', closeMenu);
 
-  document.getElementById('menu-absent-btn').addEventListener('click', () => handleMarkAbsent(laneId));
-  document.getElementById('menu-correct-btn').addEventListener('click', () => handleScoreCorrection(laneId));
-  document.getElementById('menu-skip-btn').addEventListener('click', () => handleSkipBowler(laneId));
+  document.getElementById('menu-absent-btn').addEventListener('click', () =>
+    handleMarkAbsent(laneId)
+  );
+  document.getElementById('menu-correct-btn').addEventListener('click', () =>
+    handleScoreCorrection(laneId)
+  );
+  document.getElementById('menu-skip-btn').addEventListener('click', () =>
+    handleSkipBowler(laneId)
+  );
 
   // Click outside modal closes it
   document.getElementById('lane-menu-overlay').addEventListener('click', (e) => {
