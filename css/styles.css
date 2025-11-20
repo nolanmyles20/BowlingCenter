@@ -1,0 +1,402 @@
+/* GLOBAL */
+
+body {
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+  margin: 0;
+  padding: 0;
+  background: #020617;
+  color: #e5e7eb;
+}
+
+.top-bar {
+  background: #020617;
+  border-bottom: 2px solid #0f172a;
+  padding: 0.5rem 1rem;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.top-bar h1 {
+  margin: 0.2rem 0;
+  font-size: 1.25rem;
+  color: #e5e7eb;
+}
+
+nav a {
+  margin-right: 0.5rem;
+  color: #38bdf8;
+  text-decoration: none;
+  font-size: 0.9rem;
+}
+
+nav a:hover {
+  text-decoration: underline;
+}
+
+main {
+  padding: 1rem;
+}
+
+.panel {
+  background: #020617;
+  border-radius: 6px;
+  padding: 0.75rem 1rem;
+  margin-bottom: 0.9rem;
+  border: 1px solid #0f172a;
+}
+
+/* FORMS & BUTTONS */
+
+.form-row {
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 0.6rem;
+}
+
+.form-row label {
+  margin-bottom: 0.2rem;
+  font-size: 0.85rem;
+  color: #9ca3af;
+}
+
+.form-row input,
+.form-row select {
+  padding: 0.35rem;
+  border-radius: 4px;
+  border: 1px solid #374151;
+  background: #020617;
+  color: #e5e7eb;
+  font-size: 0.9rem;
+}
+
+.form-actions {
+  margin-top: 0.5rem;
+}
+
+.btn-primary,
+.btn-secondary,
+.btn-small,
+.btn-pin {
+  padding: 0.35rem 0.7rem;
+  border-radius: 4px;
+  border: none;
+  cursor: pointer;
+  margin-right: 0.3rem;
+  margin-bottom: 0.3rem;
+  font-size: 0.8rem;
+}
+
+.btn-primary {
+  background: #22c55e;
+  color: #020617;
+}
+
+.btn-secondary {
+  background: #4b5563;
+  color: #e5e7eb;
+}
+
+.btn-secondary.small {
+  padding: 0.25rem 0.6rem;
+  font-size: 0.75rem;
+}
+
+.btn-small {
+  background: #374151;
+  color: #e5e7eb;
+}
+
+.btn-pin {
+  background: #1e293b;
+  color: #e5e7eb;
+  min-width: 2.2rem;
+}
+
+.btn-pin:hover,
+.btn-small:hover,
+.btn-primary:hover,
+.btn-secondary:hover {
+  filter: brightness(1.2);
+}
+
+/* TABLES */
+
+.lanes-table,
+.bowler-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.lanes-table th,
+.lanes-table td,
+.bowler-table th,
+.bowler-table td {
+  border: 1px solid #1f2937;
+  padding: 0.4rem;
+  text-align: left;
+  font-size: 0.85rem;
+}
+
+.lanes-table th,
+.bowler-table th {
+  background: #0f172a;
+}
+
+/* LANE SCREEN LAYOUT */
+
+.lane-body {
+  background: radial-gradient(circle at top, #0f172a 0, #020617 55%);
+}
+
+.lane-main {
+  max-width: 1080px;
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: 2fr 1.4fr;
+  grid-template-rows: auto auto;
+  gap: 0.75rem;
+}
+
+.lane-info-panel {
+  grid-column: 1 / 3;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 1.5rem;
+  background: #020617;
+}
+
+.lane-info-line {
+  display: flex;
+  gap: 0.4rem;
+  font-size: 0.9rem;
+}
+
+.lane-info-label {
+  color: #9ca3af;
+  font-weight: 500;
+}
+
+.lane-info-value {
+  color: #e5e7eb;
+}
+
+.lane-controls-panel {
+  grid-column: 1 / 2;
+  background: #020617;
+}
+
+.lane-controls-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.5rem;
+}
+
+.lane-controls-panel h2,
+.lane-pin-panel h2 {
+  margin: 0;
+  font-size: 1rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #e5e7eb;
+}
+
+.lane-pin-panel {
+  grid-column: 2 / 3;
+  background: #020617;
+}
+
+.lane-total-row {
+  margin-top: 0.5rem;
+  display: flex;
+  justify-content: flex-end;
+  align-items: baseline;
+  gap: 0.35rem;
+}
+
+.lane-total-label {
+  font-size: 0.85rem;
+  color: #9ca3af;
+}
+
+.lane-total-value {
+  font-size: 1.4rem;
+  font-weight: 700;
+  color: #facc15;
+}
+
+/* SCOREBOARD */
+
+.scoreboard {
+  width: 100%;
+  border-radius: 6px;
+  overflow: hidden;
+  background: #020617;
+  border: 2px solid #991b1b;
+  box-shadow: 0 0 20px rgba(0,0,0,0.6);
+}
+
+.scoreboard-row {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(40px, 1fr);
+}
+
+.scoreboard-header {
+  background: #111827;
+}
+
+.scoreboard-row:nth-child(2) {
+  background: #7f1d1d; /* red bar like house scoring */
+}
+
+.scoreboard-row:nth-child(3) {
+  background: #b91c1c;
+}
+
+.scoreboard-cell {
+  padding: 0.35rem 0.4rem;
+  border-right: 1px solid #1f2937;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  min-height: 40px;
+}
+
+.scoreboard-cell:last-child {
+  border-right: none;
+}
+
+.label-cell {
+  min-width: 70px;
+  font-weight: 600;
+  font-size: 0.85rem;
+  background: #020617;
+  color: #e5e7eb;
+}
+
+.small-label {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #f9fafb;
+}
+
+.frame-number-cell {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #e5e7eb;
+}
+
+.frame-rolls-cell {
+  font-size: 0.95rem;
+  color: #fee2e2;
+}
+
+.rolls-top {
+  font-weight: 700;
+  font-size: 1rem;
+}
+
+.rolls-bottom {
+  font-size: 0.75rem;
+  opacity: 0.85;
+}
+
+.frame-total-cell {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #facc15;
+}
+
+/* PINS BUTTONS */
+
+.pins-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+}
+
+/* RESPONSIVE */
+
+@media (max-width: 800px) {
+  .lane-main {
+    grid-template-columns: 1fr;
+  }
+  .lane-info-panel {
+    grid-column: 1 / 2;
+  }
+  .lane-controls-panel,
+  .lane-pin-panel {
+    grid-column: 1 / 2;
+  }
+}
+/* ----- LANE MENU MODAL ----- */
+
+.top-nav {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.lane-menu-btn {
+  margin-left: 0.75rem;
+}
+
+.hidden {
+  display: none !important;
+}
+
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.75);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 50;
+}
+
+.modal-window {
+  background: #020617;
+  border-radius: 8px;
+  border: 1px solid #1f2937;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.8);
+  padding: 0.75rem 1rem 0.8rem;
+  min-width: 260px;
+  max-width: 320px;
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.5rem;
+}
+
+.modal-header h2 {
+  font-size: 1rem;
+  margin: 0;
+}
+
+.modal-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  margin-bottom: 0.6rem;
+}
+
+.modal-action {
+  width: 100%;
+  text-align: left;
+  justify-content: flex-start;
+}
+
+.modal-footer {
+  display: flex;
+  justify-content: flex-end;
+}
