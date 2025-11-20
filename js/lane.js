@@ -4,6 +4,7 @@ import {
   getState,
   saveState,
   addRollForCurrentPlayer,
+  forceAddRollForCurrentPlayer,
   toggleCurrentPlayerAbsent,
   advanceToNextPlayer,
   updateLane
@@ -139,7 +140,6 @@ function getCurrentFrameForLane(lane) {
 }
 
 // Is the current game fully complete for all players on this lane?
-// Is the current game fully complete for all players on this lane?
 function isGameFullyComplete(lane) {
   const players = lane.players || [];
   if (!players.length) return false;
@@ -172,7 +172,6 @@ function isGameFullyComplete(lane) {
   // Only call it "complete" if someone has actually bowled in this game
   return anyStarted;
 }
-
 
 /* ---------------------------------------------------------
    League base helper (for absent scoring)
@@ -258,8 +257,9 @@ function autoProcessAbsent(laneId) {
       r2 = 10 - r1;
     }
 
-    addRollForCurrentPlayer(laneId, r1);
-    addRollForCurrentPlayer(laneId, r2);
+    // force scoring for absent bowler
+    forceAddRollForCurrentPlayer(laneId, r1);
+    forceAddRollForCurrentPlayer(laneId, r2);
 
     // move to next bowler (loop continues if *they* are also absent)
     advanceToNextPlayer(laneId);
