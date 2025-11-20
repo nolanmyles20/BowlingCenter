@@ -139,12 +139,13 @@ function getCurrentFrameForLane(lane) {
 }
 
 // Is the current game fully complete for all players on this lane?
+// Is the current game fully complete for all players on this lane?
 function isGameFullyComplete(lane) {
   const players = lane.players || [];
   if (!players.length) return false;
 
   const gIndex = Math.max(0, Math.min(2, (lane.currentGame || 1) - 1));
-  let anyRolls = false;
+  let anyStarted = false;
 
   for (let i = 0; i < players.length; i++) {
     const p = players[i];
@@ -154,14 +155,24 @@ function isGameFullyComplete(lane) {
     const game = games[gIndex] || { rolls: [] };
     const rolls = Array.isArray(game.rolls) ? game.rolls : [];
 
-    if (rolls.length > 0) anyRolls = true;
-
     const s = scoreGame(rolls);
-    if (!s.frames || s.frames.length < 10) {
-      // Less than 10 scored frames – game not done for this bowler
+    const frames = s.frames || [];
+
+    if (frames.length > 0) {
+      anyStarted = true;
+    }
+
+    // Each real bowler must have a completed 10th frame
+    const f10 = frames.find(f => f.frame === 10);
+    if (!f10 || f10.running_total == null) {
       return false;
     }
   }
+
+  // Only call it "complete" if someone has actually bowled in this game
+  return anyStarted;
+}
+
 
   // At least one bowler actually has rolls, and all have 10 frames
   return anyRolls;
