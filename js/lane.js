@@ -82,7 +82,7 @@ function getSecondBallContextFrames1to9(rolls) {
         // We have only the first ball of this frame (1–9)
         return {
           isSecondBall: true,
-          frameIndex: frame,      // 0-based frame number
+          frameIndex: frame,      // 0-based frame index
           pinsSoFar: rolls[i] || 0
         };
       }
@@ -93,6 +93,16 @@ function getSecondBallContextFrames1to9(rolls) {
   }
 
   return { isSecondBall: false };
+}
+
+// Determine current frame (1–10) based on the CURRENT bowler
+function getCurrentFrameForLane(lane) {
+  const players = lane.players || [];
+  const idx = lane.currentPlayerIndex || 0;
+  const player = players[idx];
+  if (!player || !Array.isArray(player.rolls)) return 1;
+  const completed = countCompletedFrames9(player.rolls);
+  return Math.min(10, completed + 1);
 }
 
 /* ---------------------------------------------------------
@@ -151,7 +161,6 @@ function handleRoll(laneId, pins) {
 
   // Simple 9-pin no-tap logic for the FIRST ball of a frame
   if (lane.mode === '9pin') {
-    const ballsSoFar = rollsBefore.length;
     const ctx = getSecondBallContextFrames1to9(rollsBefore);
     const isFirstBallOfFrame = !ctx.isSecondBall; // if not waiting for 2nd, we're at first ball
     if (isFirstBallOfFrame && pins === 9) {
@@ -176,7 +185,6 @@ function handleRoll(laneId, pins) {
   }
 
   renderScore(laneId);
-  // Rebuild pin buttons based on new frame state
   renderPinButtons(getLane(laneId));
 }
 
@@ -269,18 +277,34 @@ function renderScore(laneId) {
       players.push({
         name: `Player ${i + 1}`,
         handicap: 0,
-        absent: true,       // visually marked absent
-        isCurrent: false,   // never current (not in lane.players)
+        absent: true,
+        isCurrent: false,
         scoring,
         fullFrames
       });
     }
   }
 
+  // Decide which frames to show (window of 4 in compact mode, 10 in full)
+  const currentFrame = getCurrentFrameForLane(lane);
+  let startFrame = 1;
+  let endFrame = 10;
+
+  if (viewMode === 'compact') {
+    startFrame = currentFrame - 3;
+    if (startFrame < 1) startFrame = 1;
+    endFrame = startFrame + 3;
+    if (endFrame > 10) {
+      endFrame = 10;
+      startFrame = Math.max(1, endFrame - 3);
+    }
+  }
+
+  const numFramesVisible = endFrame - startFrame + 1;
+
   // Header frames from Player 1
   const headerFrames = players[0].fullFrames;
-  const visibleFramesHeader =
-    viewMode === 'compact' ? headerFrames.slice(6) : headerFrames;
+  const visibleFramesHeader = headerFrames.slice(startFrame - 1, endFrame);
 
   const headerRow = document.createElement('div');
   headerRow.className = 'scoreboard-row scoreboard-header';
@@ -297,9 +321,15 @@ function renderScore(laneId) {
     headerRow.appendChild(cell);
   });
 
+  // Extra column header for totals
+  const totalHeaderCell = document.createElement('div');
+  totalHeaderCell.className = 'scoreboard-cell frame-number-cell';
+  totalHeaderCell.textContent = 'TOT';
+  headerRow.appendChild(totalHeaderCell);
+
   scoreboard.appendChild(headerRow);
 
-  // Player rows
+  // Player rows with per-player totals column
   players.forEach((p) => {
     const row = document.createElement('div');
     row.className = 'scoreboard-row player-row';
@@ -316,13 +346,12 @@ function renderScore(laneId) {
         ${arrow}${p.name}${absentText}
       </div>
       <div class="player-total">
-        ${p.scoring.total || 0}${p.handicap ? ' +H' + p.handicap : ''}
+        HCP ${p.handicap || 0}
       </div>
     `;
     row.appendChild(labelCell);
 
-    let framesToShow =
-      viewMode === 'compact' ? p.fullFrames.slice(6) : p.fullFrames;
+    const framesToShow = p.fullFrames.slice(startFrame - 1, endFrame);
 
     framesToShow.forEach((frame) => {
       const cell = document.createElement('div');
@@ -340,15 +369,79 @@ function renderScore(laneId) {
       row.appendChild(cell);
     });
 
+    // Per player totals column (right of the frames)
+    const scratchTotal = p.scoring.total || 0;
+    const hcp = p.handicap || 0;
+    const totalWithHcp = scratchTotal + hcp;
+
+    const totalCell = document.createElement('div');
+    totalCell.className = 'scoreboard-cell player-frame-cell';
+    totalCell.innerHTML = `
+      <div class="rolls-top">${totalWithHcp}</div>
+      <div class="rolls-bottom">Scr ${scratchTotal}</div>
+    `;
+    row.appendChild(totalCell);
+
     scoreboard.appendChild(row);
   });
 
-  // Scratch team total = sum of non-absent players' totals
-  const teamTotal = players
-    .filter(p => !p.absent)
-    .reduce((sum, p) => sum + (p.scoring.total || 0), 0);
+  // ------------ TEAM ROW ------------
+  const teamRow = document.createElement('div');
+  teamRow.className = 'scoreboard-row player-row'; // reuse styles
 
-  document.getElementById('total-score').textContent = teamTotal;
+  const teamLabelCell = document.createElement('div');
+  teamLabelCell.className = 'scoreboard-cell label-cell player-label-cell';
+  teamLabelCell.innerHTML = `
+    <div class="player-name">Team</div>
+    <div class="player-total">&nbsp;</div>
+  `;
+  teamRow.appendChild(teamLabelCell);
+
+  // Only count real players (the ones from state, not filler rows)
+  const realPlayersForTotals = players.filter((_, idx) => idx < playersSrc.length);
+
+  // Per-frame team running total (sum of each bowler's running_total for that frame)
+  for (let f = startFrame; f <= endFrame; f++) {
+    const frameIndex = f - 1;
+    let teamRunning = 0;
+    realPlayersForTotals.forEach(p => {
+      const fr = p.fullFrames[frameIndex];
+      if (fr && fr.running_total != null) {
+        teamRunning += fr.running_total;
+      }
+    });
+
+    const cell = document.createElement('div');
+    cell.className = 'scoreboard-cell player-frame-cell';
+    cell.innerHTML = `
+      <div class="rolls-top">${teamRunning || ''}</div>
+      <div class="rolls-bottom">&nbsp;</div>
+    `;
+    teamRow.appendChild(cell);
+  }
+
+  // Team totals column (scratch + handicap) in bottom-right
+  let teamScratchTotal = 0;
+  let teamHcpTotal = 0;
+  realPlayersForTotals.forEach(p => {
+    teamScratchTotal += p.scoring.total || 0;
+    teamHcpTotal += p.handicap || 0;
+  });
+
+  const teamTotalWithHcp = teamScratchTotal + teamHcpTotal;
+
+  const teamTotalCell = document.createElement('div');
+  teamTotalCell.className = 'scoreboard-cell player-frame-cell';
+  teamTotalCell.innerHTML = `
+    <div class="rolls-top">${teamTotalWithHcp}</div>
+    <div class="rolls-bottom">Scr ${teamScratchTotal} Hcp ${teamHcpTotal}</div>
+  `;
+  teamRow.appendChild(teamTotalCell);
+
+  scoreboard.appendChild(teamRow);
+
+  // Scratch team total (for the big number below the scoreboard)
+  document.getElementById('total-score').textContent = teamScratchTotal;
 
   const toggleBtn = document.getElementById('view-toggle');
   toggleBtn.textContent =
