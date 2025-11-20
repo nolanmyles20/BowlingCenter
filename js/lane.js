@@ -12,6 +12,41 @@ import { scoreGame } from './scoring.js';
 
 const VIEW_MODE_KEY_PREFIX = 'lane_view_mode_'; // per lane: 'full' or 'compact'
 
+// theme storage
+const THEME_KEY = 'bowling_theme_v1';
+const DEFAULT_THEME = {
+  accent: '#facc15',
+  rowOdd: '#1e293b',
+  rowEven: '#0f172a',
+  border: '#991b1b'
+};
+
+function loadTheme() {
+  try {
+    const raw = localStorage.getItem(THEME_KEY);
+    if (!raw) return { ...DEFAULT_THEME };
+    const parsed = JSON.parse(raw);
+    return { ...DEFAULT_THEME, ...parsed };
+  } catch {
+    return { ...DEFAULT_THEME };
+  }
+}
+
+function applyTheme(theme) {
+  const t = theme || DEFAULT_THEME;
+  const root = document.documentElement;
+  root.style.setProperty('--color-accent', t.accent);
+  root.style.setProperty('--color-row-odd', t.rowOdd);
+  root.style.setProperty('--color-row-even', t.rowEven);
+  root.style.setProperty('--color-score-border', t.border);
+}
+
+function saveTheme(theme) {
+  localStorage.setItem(THEME_KEY, JSON.stringify(theme));
+}
+
+/* --------------------------------------------------------- */
+
 function getLaneIdFromQuery() {
   const params = new URLSearchParams(window.location.search);
   return Number(params.get('lane') || '1');
@@ -535,7 +570,7 @@ function renderLaneInfo(laneId) {
 }
 
 /* ---------------------------------------------------------
-   MENU (ABSENT, SKIP, SCORE CORRECTION)
+   MENU (ABSENT, SKIP, SCORE CORRECTION, SETTINGS)
 --------------------------------------------------------- */
 
 function openMenu() {
@@ -600,6 +635,34 @@ function handleScoreCorrection(laneId) {
   renderPinButtons(getLane(laneId));
 }
 
+/* SETTINGS MODAL */
+
+function openSettingsModal() {
+  closeMenu();
+  const theme = loadTheme();
+  (document.getElementById('theme-accent') || {}).value = theme.accent;
+  (document.getElementById('theme-row-odd') || {}).value = theme.rowOdd;
+  (document.getElementById('theme-row-even') || {}).value = theme.rowEven;
+  (document.getElementById('theme-border') || {}).value = theme.border;
+  document.getElementById('settings-overlay').classList.remove('hidden');
+}
+
+function closeSettingsModal() {
+  document.getElementById('settings-overlay').classList.add('hidden');
+}
+
+function saveSettingsFromForm() {
+  const theme = {
+    accent: document.getElementById('theme-accent').value || DEFAULT_THEME.accent,
+    rowOdd: document.getElementById('theme-row-odd').value || DEFAULT_THEME.rowOdd,
+    rowEven: document.getElementById('theme-row-even').value || DEFAULT_THEME.rowEven,
+    border: document.getElementById('theme-border').value || DEFAULT_THEME.border
+  };
+  saveTheme(theme);
+  applyTheme(theme);
+  closeSettingsModal();
+}
+
 /* ---------------------------------------------------------
    GAME SWITCHER
 --------------------------------------------------------- */
@@ -622,6 +685,9 @@ function setGame(laneId, gameNum) {
 --------------------------------------------------------- */
 
 document.addEventListener('DOMContentLoaded', () => {
+  // apply saved theme
+  applyTheme(loadTheme());
+
   const laneId = getLaneIdFromQuery();
   const lane = getLane(laneId);
 
@@ -637,6 +703,7 @@ document.addEventListener('DOMContentLoaded', () => {
     renderScore(laneId);
   });
 
+  // menu
   document.getElementById('lane-menu-btn').addEventListener('click', openMenu);
   document.getElementById('menu-close-btn').addEventListener('click', closeMenu);
   document.getElementById('menu-close-bottom-btn').addEventListener('click', closeMenu);
@@ -650,6 +717,7 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('menu-skip-btn').addEventListener('click', () =>
     handleSkipBowler(laneId)
   );
+  document.getElementById('menu-settings-btn').addEventListener('click', openSettingsModal);
 
   document.getElementById('lane-menu-overlay').addEventListener('click', (e) => {
     if (e.target.id === 'lane-menu-overlay') {
@@ -657,6 +725,18 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
+  // settings modal wiring
+  document.getElementById('settings-close-btn').addEventListener('click', closeSettingsModal);
+  document.getElementById('settings-close-bottom-btn').addEventListener('click', closeSettingsModal);
+  document.getElementById('settings-save-btn').addEventListener('click', saveSettingsFromForm);
+
+  document.getElementById('settings-overlay').addEventListener('click', (e) => {
+    if (e.target.id === 'settings-overlay') {
+      closeSettingsModal();
+    }
+  });
+
+  // game buttons
   const g1 = document.getElementById('game1-btn');
   const g2 = document.getElementById('game2-btn');
   const g3 = document.getElementById('game3-btn');
