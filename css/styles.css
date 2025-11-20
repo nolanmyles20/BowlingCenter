@@ -20,7 +20,7 @@ body {
 
 .top-bar h1 {
   margin: 0.2rem 0;
-  font-size: 1.5rem; /* bigger */
+  font-size: 1.5rem;
   color: #e5e7eb;
 }
 
@@ -28,7 +28,7 @@ nav.top-nav a {
   margin-right: 0.5rem;
   color: #38bdf8;
   text-decoration: none;
-  font-size: 1rem; /* bigger */
+  font-size: 1rem;
 }
 
 nav.top-nav a:hover {
@@ -36,14 +36,14 @@ nav.top-nav a:hover {
 }
 
 main {
-  padding: 1rem;
+  padding: 1rem 0;
 }
 
 .panel {
   background: #020617;
   border-radius: 6px;
   padding: 0.75rem 1rem;
-  margin-bottom: 0.9rem;
+  margin-bottom: 0.6rem;
   border: 1px solid #0f172a;
 }
 
@@ -150,40 +150,36 @@ main {
   background: radial-gradient(circle at top, #0f172a 0, #020617 55%);
 }
 
+/* full width, no max-width, centered padding */
 .lane-main {
-  max-width: none;                     /* full-width lane view */
-  margin: 0;
-  padding: 0.5rem 1rem 0.75rem;        /* tighter padding */
+  width: 100%;
+  box-sizing: border-box;
+  padding: 0 1.5rem 1rem;
+  margin: 0 auto;
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
-  min-height: calc(100vh - 56px);      /* stretch toward full screen height */
 }
 
 .lane-info-panel {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  gap: 0.75rem;
 }
 
-.lane-controls-panel,
-.lane-pin-panel {
-  width: 100%;
-}
-
-/* make scoring panel grow to fill height */
-.lane-controls-panel {
-  flex: 1 1 auto;
+/* make the Status / League / Mode / Team row horizontal */
+#lane-info {
   display: flex;
-  flex-direction: column;
+  flex-wrap: wrap;
+  gap: 0.9rem;
+  align-items: baseline;
 }
 
 .lane-info-line {
   display: flex;
-  flex-wrap: wrap;
-  gap: 0.65rem;
+  gap: 0.25rem;
   font-size: 0.98rem;
-  align-items: baseline;
 }
 
 .lane-info-label {
@@ -199,6 +195,11 @@ main {
   margin-right: 0.25rem;
 }
 
+.lane-controls-panel,
+.lane-pin-panel {
+  width: 100%;
+}
+
 /* SCOREBOARD BASE */
 
 .scoreboard {
@@ -207,10 +208,9 @@ main {
   background: #020617;
   border: 2px solid var(--color-score-border, #991b1b);
   box-shadow: 0 0 20px rgba(0,0,0,0.6);
-  display: block;
-  flex: 1 1 auto;        /* lets it stretch vertically */
 }
 
+/* prevent horizontal scrollbars */
 .scoreboard-row {
   display: flex;
 }
@@ -218,7 +218,7 @@ main {
 .scoreboard-cell {
   padding: 6px 8px;
   border-right: 1px solid #1f2937;
-  min-height: 52px; /* taller cells */
+  min-height: 52px;
   display: flex;
   flex-direction: column;
   justify-content: center;
@@ -227,11 +227,11 @@ main {
 
 /* left label / bowler name column */
 .scoreboard .label-cell {
-  flex: 0 0 140px;      /* a bit wider */
+  flex: 0 0 140px;
   max-width: 140px;
   box-sizing: border-box;
   font-weight: 600;
-  font-size: 1.05rem;   /* bigger */
+  font-size: 1.05rem;
   color: #e5e7eb;
 }
 
@@ -242,7 +242,7 @@ main {
   min-width: 40px;
   text-align: center;
   box-sizing: border-box;
-  font-size: 1.05rem;  /* bigger */
+  font-size: 1.05rem;
 }
 
 /* player rows */
@@ -287,7 +287,7 @@ main {
 /* Frame contents */
 
 .frame-score {
-  font-size: 1.6rem;      /* big primary number */
+  font-size: 1.6rem;
   font-weight: 700;
   color: #fee2e2;
   line-height: 1.1;
@@ -300,7 +300,7 @@ main {
 }
 
 .roll {
-  font-size: 0.9rem;      /* smaller than frame-score */
+  font-size: 0.9rem;
   font-weight: 500;
   color: #e5e7eb;
 }
@@ -311,7 +311,7 @@ main {
   display: flex;
   gap: 0.35rem;
   margin-top: 0.25rem;
-  font-size: 1.2rem;       /* bigger arrows */
+  font-size: 1.2rem;
 }
 
 .current-arrows .arrow-seg {
@@ -338,11 +338,6 @@ main {
   gap: 0.25rem;
 }
 
-/* Hide recap panel on lane screen (we show recap in popup instead) */
-.lane-recap-panel {
-  display: none;
-}
-
 /* MODALS */
 
 .hidden {
@@ -366,7 +361,7 @@ main {
   box-shadow: 0 20px 40px rgba(0,0,0,0.8);
   padding: 0.75rem 1rem 0.8rem;
   min-width: 260px;
-  max-width: 340px;
+  max-width: 420px;
 }
 
 .modal-header {
@@ -404,11 +399,34 @@ main {
   justify-content: flex-end;
 }
 
+/* recap table reused in modal */
+.recap-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 0.25rem;
+}
+
+.recap-table th,
+.recap-table td {
+  border: 1px solid #1f2937;
+  padding: 0.25rem 0.35rem;
+  font-size: 0.85rem;
+  text-align: center;
+}
+
+.recap-table th {
+  background: #0f172a;
+}
+
 /* RESPONSIVE */
 
 @media (max-width: 800px) {
   .lane-main {
-    padding: 0.5rem 0.5rem 0.75rem;
+    padding: 0 0.5rem 0.75rem;
+  }
+
+  #lane-info {
+    gap: 0.45rem;
   }
 
   .scoreboard .label-cell {
@@ -427,18 +445,4 @@ main {
 .player-name.absent {
   text-decoration: line-through;
   color: #9ca3af;
-}
-
-/* banner text above grid when waiting to start next game */
-
-.next-game-banner {
-  margin-bottom: 0.4rem;
-  padding: 0.35rem 0.6rem;
-  background: #1f2937;
-  border-radius: 4px;
-  text-align: center;
-  font-size: 0.95rem;
-  color: #facc15;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
 }
