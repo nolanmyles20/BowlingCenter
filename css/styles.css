@@ -14,6 +14,12 @@
 
 /* GLOBAL */
 
+html,
+body {
+  height: 100%;
+  overflow-x: hidden;  /* kill sideways scroll */
+}
+
 body {
   font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
   margin: 0;
@@ -25,7 +31,7 @@ body {
 .top-bar {
   background: var(--color-bg-panel);
   border-bottom: 2px solid #0f172a;
-  padding: 0.5rem 1rem;
+  padding: 0.3rem 0.75rem;
   display: flex;
   flex-wrap: wrap;
   justify-content: space-between;
@@ -33,7 +39,7 @@ body {
 }
 
 .top-bar h1 {
-  margin: 0.2rem 0;
+  margin: 0.1rem 0;
   font-size: 1.25rem;
   color: var(--color-text);
 }
@@ -50,14 +56,15 @@ nav.top-nav a:hover {
 }
 
 main {
-  padding: 1rem 1rem 1.5rem;
+  padding: 0.5rem 0.75rem 1rem;
+  min-height: calc(100vh - 48px); /* fill height under header */
 }
 
 .panel {
   background: var(--color-bg-panel);
   border-radius: 6px;
-  padding: 0.75rem 1rem;
-  margin-bottom: 0.9rem;
+  padding: 0.6rem 0.75rem;
+  margin-bottom: 0.6rem;
   border: 1px solid #0f172a;
 }
 
@@ -93,7 +100,7 @@ main {
 .btn-secondary,
 .btn-small,
 .btn-pin {
-  padding: 0.35rem 0.7rem;
+  padding: 0.3rem 0.65rem;
   border-radius: 4px;
   border: none;
   cursor: pointer;
@@ -135,7 +142,7 @@ main {
   filter: brightness(1.2);
 }
 
-/* TABLES */
+/* TABLES (front desk / bowlers pages) */
 
 .lanes-table,
 .bowler-table {
@@ -166,40 +173,54 @@ main {
 
 .lane-main {
   width: 100%;
-  max-width: 100%;   /* no center-constrain, fill screen */
-  margin: 0;
+  max-width: 1400px;
+  margin: 0 auto;
   display: grid;
-  grid-template-columns: 2fr 1.4fr;
+  grid-template-columns: 2fr 1.2fr;
   grid-template-rows: auto auto;
-  gap: 0.75rem;
+  gap: 0.6rem;
 }
+
+/* compact status row */
 
 .lane-info-panel {
   grid-column: 1 / 3;
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 1.5rem;
+  gap: 0.25rem 1.5rem;
   background: var(--color-bg-panel);
+  padding-top: 0.45rem;
+  padding-bottom: 0.45rem;
 }
 
 .lane-info-line {
-  display: flex;
-  gap: 0.4rem;
-  font-size: 0.9rem;
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.25rem;
+  font-size: 0.85rem;
+  white-space: nowrap;
 }
 
 .lane-info-label {
   color: #9ca3af;
-  font-weight: 500;
+  font-weight: 600;
 }
 
 .lane-info-value {
   color: var(--color-text);
 }
 
+.game-switcher {
+  display: inline-flex;
+  gap: 0.25rem;
+  margin-left: auto;
+}
+
+/* scoreboard + enter-roll panels full width */
+
 .lane-controls-panel {
-  grid-column: 1 / 3;  /* full width */
+  grid-column: 1 / 3;
   background: var(--color-bg-panel);
 }
 
@@ -207,20 +228,20 @@ main {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 0.5rem;
+  margin-bottom: 0.35rem;
 }
 
 .lane-controls-panel h2,
 .lane-pin-panel h2 {
   margin: 0;
-  font-size: 1rem;
+  font-size: 0.95rem;
   text-transform: uppercase;
   letter-spacing: 0.06em;
   color: var(--color-text);
 }
 
 .lane-pin-panel {
-  grid-column: 1 / 3;   /* full width under grid */
+  grid-column: 1 / 3;
   background: var(--color-bg-panel);
 }
 
@@ -232,7 +253,6 @@ main {
   background: #020617;
   border: 2px solid var(--color-score-border);
   box-shadow: 0 0 20px rgba(0,0,0,0.6);
-  overflow-x: auto;            /* allow horizontal scroll on small screens */
 }
 
 .scoreboard-row {
@@ -256,7 +276,7 @@ main {
 
 /* left label / bowler name column */
 .scoreboard .label-cell {
-  flex: 0 0 130px;             /* name column width */
+  flex: 0 0 130px;
   max-width: 130px;
   font-weight: 600;
   font-size: 0.85rem;
@@ -267,8 +287,8 @@ main {
 /* frame number cells and per-frame cells */
 .scoreboard .frame-number-cell,
 .scoreboard .player-frame-cell {
-  flex: 1 0 40px;              /* all frame columns same width */
-  min-width: 40px;
+  flex: 1 1 0;        /* allow shrink, share remaining width */
+  min-width: 0;
   text-align: center;
 }
 
@@ -438,13 +458,13 @@ main {
 
 .lane-recap-panel {
   grid-column: 1 / 3;
-  margin-top: 0.5rem;
+  margin-top: 0.2rem;
 }
 
 .lane-recap-panel h3 {
   margin-top: 0;
-  margin-bottom: 0.5rem;
-  font-size: 0.95rem;
+  margin-bottom: 0.4rem;
+  font-size: 0.9rem;
 }
 
 .recap-table {
@@ -477,5 +497,8 @@ main {
   .lane-pin-panel,
   .lane-recap-panel {
     grid-column: 1 / 2;
+  }
+  .game-switcher {
+    margin-left: 0;
   }
 }
