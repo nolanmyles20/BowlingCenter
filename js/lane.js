@@ -5,7 +5,8 @@ import {
   saveState,
   addRollForCurrentPlayer,
   toggleCurrentPlayerAbsent,
-  advanceToNextPlayer
+  advanceToNextPlayer,
+  updateLane
 } from './state.js';
 import { scoreGame } from './scoring.js';
 
@@ -31,18 +32,16 @@ function setViewMode(laneId, mode) {
    FRAME / ROLL HELPERS
 --------------------------------------------------------- */
 
-// Count how many frames (1–9) are fully completed in a roll sequence
 function countCompletedFrames9(rolls) {
   let frame = 0;
   let i = 0;
   while (frame < 9 && i < rolls.length) {
     const r = rolls[i];
     if (r === 10) {
-      // strike, one-ball frame
       frame += 1;
       i += 1;
     } else {
-      if (i + 1 >= rolls.length) break; // incomplete second ball
+      if (i + 1 >= rolls.length) break;
       frame += 1;
       i += 2;
     }
@@ -50,22 +49,12 @@ function countCompletedFrames9(rolls) {
   return frame;
 }
 
-// Did the last roll finish a frame 1–9?
 function didLastRollCompleteFrame(rollsBefore, rollsAfter) {
   const beforeFrames = countCompletedFrames9(rollsBefore);
   const afterFrames = countCompletedFrames9(rollsAfter);
   return afterFrames > beforeFrames;
 }
 
-/**
- * For frames 1–9 only:
- * Look at existing rolls and see if we are waiting for the second ball of a frame,
- * and if so, how many pins have already been knocked down.
- *
- * Returns:
- *   { isSecondBall: true, frameIndex, pinsSoFar }  for frames 1–9
- *   or { isSecondBall: false }
- */
 function getSecondBallContextFrames1to9(rolls) {
   let frame = 0;
   let i = 0;
@@ -74,19 +63,16 @@ function getSecondBallContextFrames1to9(rolls) {
     const r = rolls[i];
 
     if (r === 10) {
-      // Strike, full frame in one roll
       frame += 1;
       i += 1;
     } else {
       if (i + 1 >= rolls.length) {
-        // We have only the first ball of this frame (1–9)
         return {
           isSecondBall: true,
-          frameIndex: frame,      // 0-based frame index
+          frameIndex: frame,
           pinsSoFar: rolls[i] || 0
         };
       }
-      // We have both balls for this frame, move on
       frame += 1;
       i += 2;
     }
@@ -95,13 +81,16 @@ function getSecondBallContextFrames1to9(rolls) {
   return { isSecondBall: false };
 }
 
-// Determine current frame (1–10) based on the CURRENT bowler
 function getCurrentFrameForLane(lane) {
   const players = lane.players || [];
   const idx = lane.currentPlayerIndex || 0;
   const player = players[idx];
-  if (!player || !Array.isArray(player.rolls)) return 1;
-  const completed = countCompletedFrames9(player.rolls);
+  if (!player || !Array.isArray(player.games)) return 1;
+
+  const gIndex = Math.max(0, Math.min(2, (lane.currentGame || 1) - 1));
+  const game = player.games[gIndex] || { rolls: [] };
+  const rolls = Array.isArray(game.rolls) ? game.rolls : [];
+  const completed = countCompletedFrames9(rolls);
   return Math.min(10, completed + 1);
 }
 
@@ -115,14 +104,13 @@ function renderPinButtons(lane) {
 
   const players = lane.players || [];
   const currentIndex = lane.currentPlayerIndex || 0;
-  const player = players[currentIndex] || { rolls: [] };
-  const rolls = Array.isArray(player.rolls) ? player.rolls : [];
+  const player = players[currentIndex] || { games: [{ rolls: [] }] };
+  const gIndex = Math.max(0, Math.min(2, (lane.currentGame || 1) - 1));
+  const game = player.games?.[gIndex] || { rolls: [] };
+  const rolls = Array.isArray(game.rolls) ? game.rolls : [];
 
-  // Default: allow 0–10 pins
   let maxPins = 10;
 
-  // For frames 1–9, if we are on the 2nd ball of the frame,
-  // only allow up to (10 - firstBallPins)
   const ctx = getSecondBallContextFrames1to9(rolls);
   if (ctx.isSecondBall && ctx.frameIndex < 9) {
     const remaining = 10 - ctx.pinsSoFar;
@@ -149,37 +137,31 @@ function handleRoll(laneId, pins) {
     return;
   }
 
-  // Snapshot rolls for current player BEFORE this roll
   const playersBefore = lane.players || [];
   const currentIndex = lane.currentPlayerIndex || 0;
-  const currentPlayerBefore = playersBefore[currentIndex] || { rolls: [] };
-  const rollsBefore = Array.isArray(currentPlayerBefore.rolls)
-    ? [...currentPlayerBefore.rolls]
-    : [];
+  const gIndex = Math.max(0, Math.min(2, (lane.currentGame || 1) - 1));
+  const currentPlayerBefore = playersBefore[currentIndex] || { games: [{ rolls: [] }] };
+  const gameBefore = currentPlayerBefore.games?.[gIndex] || { rolls: [] };
+  const rollsBefore = Array.isArray(gameBefore.rolls) ? [...gameBefore.rolls] : [];
 
   let effectivePins = pins;
 
-  // Simple 9-pin no-tap logic for the FIRST ball of a frame
   if (lane.mode === '9pin') {
     const ctx = getSecondBallContextFrames1to9(rollsBefore);
-    const isFirstBallOfFrame = !ctx.isSecondBall; // if not waiting for 2nd, we're at first ball
+    const isFirstBallOfFrame = !ctx.isSecondBall;
     if (isFirstBallOfFrame && pins === 9) {
-      effectivePins = 10; // treat 9 as strike
+      effectivePins = 10;
     }
   }
 
-  // Add roll to current player
   addRollForCurrentPlayer(laneId, effectivePins);
 
-  // Get state AFTER roll
   const laneAfter = getLane(laneId);
   const playersAfter = laneAfter.players || [];
-  const currentPlayerAfter = playersAfter[currentIndex] || { rolls: [] };
-  const rollsAfter = Array.isArray(currentPlayerAfter.rolls)
-    ? currentPlayerAfter.rolls
-    : [];
+  const currentPlayerAfter = playersAfter[currentIndex] || { games: [{ rolls: [] }] };
+  const gameAfter = currentPlayerAfter.games?.[gIndex] || { rolls: [] };
+  const rollsAfter = Array.isArray(gameAfter.rolls) ? gameAfter.rolls : [];
 
-  // If this roll completed a frame (1–9), rotate to next player
   if (didLastRollCompleteFrame(rollsBefore, rollsAfter)) {
     advanceToNextPlayer(laneId);
   }
@@ -218,11 +200,8 @@ function buildFullFrames(frames) {
 function formatFrameRolls(frameIndex, frame) {
   const rolls = frame.rolls || [];
 
-  // Frames 1–9
   if (frameIndex < 9) {
-    if (rolls[0] === 10) {
-      return ['X', ''];
-    }
+    if (rolls[0] === 10) return ['X', ''];
     const first = rolls[0];
     const second = rolls[1];
 
@@ -236,7 +215,6 @@ function formatFrameRolls(frameIndex, frame) {
     return [firstVal, secondVal];
   }
 
-  // 10th frame (up to 3 balls)
   const symbols = rolls.map((r, i) => {
     if (r === 10) return 'X';
     if (i > 0 && (rolls[i - 1] ?? 0) + r === 10) return '/';
@@ -249,6 +227,7 @@ function formatFrameRolls(frameIndex, frame) {
 function renderScore(laneId) {
   const lane = getLane(laneId);
   const viewMode = getViewMode(laneId);
+  const gIndex = Math.max(0, Math.min(2, (lane.currentGame || 1) - 1));
 
   const scoreboard = document.getElementById('scoreboard');
   scoreboard.innerHTML = '';
@@ -256,11 +235,11 @@ function renderScore(laneId) {
   const playersSrc = lane.players || [];
   const players = [];
 
-  // Build up to 4 visual rows
   for (let i = 0; i < 4; i++) {
     if (i < playersSrc.length) {
       const src = playersSrc[i];
-      const scoring = scoreGame(src.rolls || []);
+      const game = src.games?.[gIndex] || { rolls: [] };
+      const scoring = scoreGame(game.rolls || []);
       const fullFrames = buildFullFrames(scoring.frames);
       players.push({
         name: src.name || `Player ${i + 1}`,
@@ -271,7 +250,6 @@ function renderScore(laneId) {
         fullFrames
       });
     } else {
-      // Extra slots beyond real team: show as ABSENT and skip in rotation (they're not in lane.players)
       const scoring = scoreGame([]);
       const fullFrames = buildFullFrames([]);
       players.push({
@@ -285,7 +263,6 @@ function renderScore(laneId) {
     }
   }
 
-  // Decide which frames to show (window of 4 in compact mode, 10 in full)
   const currentFrame = getCurrentFrameForLane(lane);
   let startFrame = 1;
   let endFrame = 10;
@@ -300,9 +277,6 @@ function renderScore(laneId) {
     }
   }
 
-  const numFramesVisible = endFrame - startFrame + 1;
-
-  // Header frames from Player 1
   const headerFrames = players[0].fullFrames;
   const visibleFramesHeader = headerFrames.slice(startFrame - 1, endFrame);
 
@@ -311,7 +285,7 @@ function renderScore(laneId) {
 
   const gameLabel = document.createElement('div');
   gameLabel.className = 'scoreboard-cell label-cell';
-  gameLabel.textContent = 'Game 1';
+  gameLabel.textContent = `Game ${lane.currentGame || 1}`;
   headerRow.appendChild(gameLabel);
 
   visibleFramesHeader.forEach(frame => {
@@ -321,7 +295,6 @@ function renderScore(laneId) {
     headerRow.appendChild(cell);
   });
 
-  // Extra column header for totals
   const totalHeaderCell = document.createElement('div');
   totalHeaderCell.className = 'scoreboard-cell frame-number-cell';
   totalHeaderCell.textContent = 'TOT';
@@ -329,7 +302,6 @@ function renderScore(laneId) {
 
   scoreboard.appendChild(headerRow);
 
-  // Player rows with per-player totals column
   players.forEach((p) => {
     const row = document.createElement('div');
     row.className = 'scoreboard-row player-row';
@@ -369,7 +341,6 @@ function renderScore(laneId) {
       row.appendChild(cell);
     });
 
-    // Per player totals column (right of the frames)
     const scratchTotal = p.scoring.total || 0;
     const hcp = p.handicap || 0;
     const totalWithHcp = scratchTotal + hcp;
@@ -385,9 +356,9 @@ function renderScore(laneId) {
     scoreboard.appendChild(row);
   });
 
-  // ------------ TEAM ROW ------------
+  // TEAM ROW (current game)
   const teamRow = document.createElement('div');
-  teamRow.className = 'scoreboard-row player-row'; // reuse styles
+  teamRow.className = 'scoreboard-row player-row';
 
   const teamLabelCell = document.createElement('div');
   teamLabelCell.className = 'scoreboard-cell label-cell player-label-cell';
@@ -397,10 +368,8 @@ function renderScore(laneId) {
   `;
   teamRow.appendChild(teamLabelCell);
 
-  // Only count real players (the ones from state, not filler rows)
   const realPlayersForTotals = players.filter((_, idx) => idx < playersSrc.length);
 
-  // Per-frame team running total (sum of each bowler's running_total for that frame)
   for (let f = startFrame; f <= endFrame; f++) {
     const frameIndex = f - 1;
     let teamRunning = 0;
@@ -420,7 +389,6 @@ function renderScore(laneId) {
     teamRow.appendChild(cell);
   }
 
-  // Team totals column (scratch + handicap) in bottom-right
   let teamScratchTotal = 0;
   let teamHcpTotal = 0;
   realPlayersForTotals.forEach(p => {
@@ -440,12 +408,102 @@ function renderScore(laneId) {
 
   scoreboard.appendChild(teamRow);
 
-  // Scratch team total (for the big number below the scoreboard)
   document.getElementById('total-score').textContent = teamScratchTotal;
 
   const toggleBtn = document.getElementById('view-toggle');
   toggleBtn.textContent =
     viewMode === 'full' ? 'Show Last 4 Frames' : 'Show All 10 Frames';
+
+  renderSeriesRecap(laneId);
+}
+
+/* ---------------------------------------------------------
+   SERIES RECAP (3 GAMES)
+--------------------------------------------------------- */
+
+function renderSeriesRecap(laneId) {
+  const lane = getLane(laneId);
+  const playersSrc = lane.players || [];
+  const recap = document.getElementById('series-recap');
+  if (!recap) return;
+
+  let html = `
+    <h3>Series Recap (3 Games)</h3>
+    <table class="recap-table">
+      <thead>
+        <tr>
+          <th>Bowler</th>
+          <th>G1 Scr</th><th>G1+H</th>
+          <th>G2 Scr</th><th>G2+H</th>
+          <th>G3 Scr</th><th>G3+H</th>
+          <th>Series Scr</th><th>Series+H</th>
+        </tr>
+      </thead>
+      <tbody>
+  `;
+
+  const teamTotals = {
+    gScr: [0, 0, 0],
+    gHcp: [0, 0, 0],
+    seriesScr: 0,
+    seriesHcp: 0
+  };
+
+  playersSrc.forEach(src => {
+    const name = src.name || 'Bowler';
+    const hcp = src.handicap || 0;
+    const games = src.games || [{ rolls: [] }, { rolls: [] }, { rolls: [] }];
+
+    const gScr = [];
+    const gWithH = [];
+    for (let gi = 0; gi < 3; gi++) {
+      const g = games[gi] || { rolls: [] };
+      const s = scoreGame(g.rolls || []);
+      const scr = s.total || 0;
+      gScr[gi] = scr;
+      gWithH[gi] = scr + hcp;
+    }
+
+    const seriesScr = gScr[0] + gScr[1] + gScr[2];
+    const seriesWithH = seriesScr + hcp * 3;
+
+    teamTotals.gScr[0] += gScr[0];
+    teamTotals.gScr[1] += gScr[1];
+    teamTotals.gScr[2] += gScr[2];
+    teamTotals.gHcp[0] += hcp;
+    teamTotals.gHcp[1] += hcp;
+    teamTotals.gHcp[2] += hcp;
+    teamTotals.seriesScr += seriesScr;
+    teamTotals.seriesHcp += hcp * 3;
+
+    html += `
+      <tr>
+        <td>${name}</td>
+        <td>${gScr[0]}</td><td>${gWithH[0]}</td>
+        <td>${gScr[1]}</td><td>${gWithH[1]}</td>
+        <td>${gScr[2]}</td><td>${gWithH[2]}</td>
+        <td>${seriesScr}</td><td>${seriesWithH}</td>
+      </tr>
+    `;
+  });
+
+  const teamSeriesWithH = teamTotals.seriesScr + teamTotals.seriesHcp;
+
+  html += `
+      </tbody>
+      <tfoot>
+        <tr>
+          <th>Team Totals</th>
+          <th>${teamTotals.gScr[0]}</th><th>${teamTotals.gScr[0] + teamTotals.gHcp[0]}</th>
+          <th>${teamTotals.gScr[1]}</th><th>${teamTotals.gScr[1] + teamTotals.gHcp[1]}</th>
+          <th>${teamTotals.gScr[2]}</th><th>${teamTotals.gScr[2] + teamTotals.gHcp[2]}</th>
+          <th>${teamTotals.seriesScr}</th><th>${teamSeriesWithH}</th>
+        </tr>
+      </tfoot>
+    </table>
+  `;
+
+  recap.innerHTML = html;
 }
 
 /* ---------------------------------------------------------
@@ -499,6 +557,7 @@ function handleSkipBowler(laneId) {
 
 function handleScoreCorrection(laneId) {
   const lane = getLane(laneId);
+  const gIndex = Math.max(0, Math.min(2, (lane.currentGame || 1) - 1));
   const players = lane.players || [];
   if (!players.length) {
     alert('No players on lane');
@@ -507,9 +566,10 @@ function handleScoreCorrection(laneId) {
 
   const idx = lane.currentPlayerIndex || 0;
   const player = players[idx];
-  const rolls = player.rolls || [];
+  const game = player.games?.[gIndex] || { rolls: [] };
+  const rolls = game.rolls || [];
   if (!rolls.length) {
-    alert('This bowler has no rolls yet');
+    alert('This bowler has no rolls in this game yet');
     return;
   }
 
@@ -531,10 +591,27 @@ function handleScoreCorrection(laneId) {
     return;
   }
 
-  player.rolls[index - 1] = pins;
+  game.rolls[index - 1] = pins;
   saveState();
   renderScore(laneId);
   renderPinButtons(getLane(laneId));
+}
+
+/* ---------------------------------------------------------
+   GAME SWITCHER
+--------------------------------------------------------- */
+
+function setGame(laneId, gameNum) {
+  updateLane(laneId, { currentGame: gameNum });
+  renderScore(laneId);
+  renderPinButtons(getLane(laneId));
+
+  ['game1-btn', 'game2-btn', 'game3-btn'].forEach((id, idx) => {
+    const btn = document.getElementById(id);
+    if (!btn) return;
+    if (idx === gameNum - 1) btn.classList.add('active');
+    else btn.classList.remove('active');
+  });
 }
 
 /* ---------------------------------------------------------
@@ -549,7 +626,6 @@ document.addEventListener('DOMContentLoaded', () => {
   renderScore(laneId);
   renderPinButtons(lane);
 
-  // View toggle
   const toggleBtn = document.getElementById('view-toggle');
   toggleBtn.addEventListener('click', () => {
     const current = getViewMode(laneId);
@@ -558,7 +634,6 @@ document.addEventListener('DOMContentLoaded', () => {
     renderScore(laneId);
   });
 
-  // Menu bindings
   document.getElementById('lane-menu-btn').addEventListener('click', openMenu);
   document.getElementById('menu-close-btn').addEventListener('click', closeMenu);
   document.getElementById('menu-close-bottom-btn').addEventListener('click', closeMenu);
@@ -573,10 +648,21 @@ document.addEventListener('DOMContentLoaded', () => {
     handleSkipBowler(laneId)
   );
 
-  // Click outside modal closes it
   document.getElementById('lane-menu-overlay').addEventListener('click', (e) => {
     if (e.target.id === 'lane-menu-overlay') {
       closeMenu();
     }
   });
+
+  const g1 = document.getElementById('game1-btn');
+  const g2 = document.getElementById('game2-btn');
+  const g3 = document.getElementById('game3-btn');
+
+  if (g1 && g2 && g3) {
+    g1.addEventListener('click', () => setGame(laneId, 1));
+    g2.addEventListener('click', () => setGame(laneId, 2));
+    g3.addEventListener('click', () => setGame(laneId, 3));
+
+    setGame(laneId, lane.currentGame || 1);
+  }
 });
