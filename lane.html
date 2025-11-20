@@ -121,6 +121,25 @@
       </div>
     </div>
   </div>
+    <!-- Game complete modal -->
+  <div id="game-complete-overlay" class="modal-overlay hidden">
+    <div class="modal-window">
+      <div class="modal-header">
+        <h3 id="game-complete-title">Game Complete</h3>
+        <button id="game-complete-close" class="btn-small btn-secondary">X</button>
+      </div>
+      <div class="modal-body">
+        <div id="game-complete-summary">
+          <!-- filled by JS with player scores -->
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button id="game-complete-next-btn" class="btn-primary btn-small">
+          Start Next Game
+        </button>
+      </div>
+    </div>
+  </div>
 
   <script type="module" src="js/lane.js"></script>
 </body>
