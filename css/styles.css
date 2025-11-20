@@ -1,10 +1,5 @@
 /* GLOBAL */
 
-html,
-body {
-  height: 100%;
-}
-
 body {
   font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
   margin: 0;
@@ -153,33 +148,21 @@ main {
 
 .lane-body {
   background: radial-gradient(circle at top, #0f172a 0, #020617 55%);
-  min-height: 100%;
-  display: flex;
-  flex-direction: column;
 }
 
 .lane-main {
-  max-width: 1080px;
-  margin: 0 auto;
+  max-width: none;                     /* full-width lane view */
+  margin: 0;
+  padding: 0.5rem 1rem 0.75rem;        /* tighter padding */
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
-  flex: 1; /* fill remaining vertical space */
+  min-height: calc(100vh - 56px);      /* stretch toward full screen height */
 }
-
-/* compact status row */
 
 .lane-info-panel {
   display: flex;
   justify-content: space-between;
-  align-items: center;
-}
-
-/* make Status / League / Mode / Team horizontal */
-#lane-info {
-  display: flex;
-  gap: 1.5rem;
-  flex-wrap: wrap;
   align-items: center;
 }
 
@@ -188,10 +171,19 @@ main {
   width: 100%;
 }
 
+/* make scoring panel grow to fill height */
+.lane-controls-panel {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+}
+
 .lane-info-line {
   display: flex;
-  gap: 0.4rem;
+  flex-wrap: wrap;
+  gap: 0.65rem;
   font-size: 0.98rem;
+  align-items: baseline;
 }
 
 .lane-info-label {
@@ -216,6 +208,7 @@ main {
   border: 2px solid var(--color-score-border, #991b1b);
   box-shadow: 0 0 20px rgba(0,0,0,0.6);
   display: block;
+  flex: 1 1 auto;        /* lets it stretch vertically */
 }
 
 .scoreboard-row {
@@ -345,6 +338,11 @@ main {
   gap: 0.25rem;
 }
 
+/* Hide recap panel on lane screen (we show recap in popup instead) */
+.lane-recap-panel {
+  display: none;
+}
+
 /* MODALS */
 
 .hidden {
@@ -410,7 +408,7 @@ main {
 
 @media (max-width: 800px) {
   .lane-main {
-    padding: 0 0.25rem;
+    padding: 0.5rem 0.5rem 0.75rem;
   }
 
   .scoreboard .label-cell {
@@ -430,6 +428,8 @@ main {
   text-decoration: line-through;
   color: #9ca3af;
 }
+
+/* banner text above grid when waiting to start next game */
 
 .next-game-banner {
   margin-bottom: 0.4rem;
