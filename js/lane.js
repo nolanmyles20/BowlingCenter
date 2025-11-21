@@ -1,4 +1,5 @@
 // js/lane.js
+// add seedFromCSVsIfNeeded to your imports
 import {
   getLane,
   getState,
@@ -6,7 +7,8 @@ import {
   addRollForCurrentPlayer,
   toggleCurrentPlayerAbsent,
   advanceToNextPlayer,
-  updateLane
+  updateLane,
+  seedFromCSVsIfNeeded
 } from './state.js';
 
 // ⬇️ CHANGED: import popup helper as well
