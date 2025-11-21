@@ -373,10 +373,10 @@ export function seedFromCSVsIfNeeded() {
   csvSeedPromise = (async () => {
     try {
       const [leagueRows, bowlerRows, teamRows, rosterRows] = await Promise.all([
-        loadCSV('leagues.csv'),
-        loadCSV('bowlers.csv'),
-        loadCSV('teams.csv'),
-        loadCSV('team_roster.csv')
+        loadCSV('data/leagues.csv'),
+        loadCSV('data/bowlers.csv'),
+        loadCSV('data/teams.csv'),
+        loadCSV('data/team_roster.csv')
       ]);
 
       if (!leagueRows.length && !bowlerRows.length && !teamRows.length) {
