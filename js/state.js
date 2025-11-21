@@ -70,8 +70,13 @@ export function getState() {
 }
 
 export function saveState() {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  // Only persist lane status, selections, and scoring.
+  const toPersist = {
+    lanes: state.lanes
+  };
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(toPersist));
 }
+
 
 // ---------- lane + players ----------
 
