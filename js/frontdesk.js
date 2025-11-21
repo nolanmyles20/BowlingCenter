@@ -1,42 +1,66 @@
 // js/frontdesk.js
-import { getLane, updateLane, listTeams, resetLane } from './state.js';
+import {
+  getLane,
+  updateLane,
+  listTeams,
+  resetLane,
+  getState,
+  initStateFromCsv
+} from './state.js';
 
-const LEAGUES = [
-  'Open Bowling',
-  'Tuesday Mixed',
-  "Men\'s League",
-  "Women\'s League",
-  'Youth League'
-];
+import { loadAllCsv } from './csvLoader.js';
 
 let teamsCache = [];
+let leaguesCache = [];
+
+/* ---------------- CSV Bootstrap ---------------- */
+
+async function bootstrapFromCsv() {
+  try {
+    const { bowlers, teams, leagues } = await loadAllCsv();
+
+    // Initialize state ONLY if first run
+    initStateFromCsv(bowlers, teams, leagues);
+
+    // Store locally for dropdowns
+    teamsCache = listTeams();
+    leaguesCache = leagues.map(l => l.name);
+
+  } catch (e) {
+    console.warn("CSV load failed:", e);
+
+    // fallback to state only
+    teamsCache = listTeams();
+    leaguesCache = Object.values(getState().leagues || {}).map(l => l.name);
+  }
+}
 
 /* ---------------- helpers ---------------- */
 
-function loadTeams() {
-  teamsCache = listTeams();
-}
-
 function buildLeagueOptions(selectedLeague) {
   let html = '<option value="">-- None --</option>';
-  LEAGUES.forEach(lg => {
+
+  leaguesCache.forEach(lg => {
     const sel = lg === selectedLeague ? ' selected' : '';
     html += `<option value="${lg}"${sel}>${lg}</option>`;
   });
+
   return html;
 }
 
 function buildTeamOptions(selectedId) {
   let html = '<option value="">-- None --</option>';
+
   teamsCache.forEach(t => {
     const label = t.league ? `${t.name} (${t.league})` : t.name;
     const sel = selectedId && Number(selectedId) === Number(t.id) ? ' selected' : '';
     html += `<option value="${t.id}"${sel}>${label}</option>`;
   });
+
   return html;
 }
 
-/* ---------------- render ---------------- */
+/* ---------------- render lanes ---------------- */
 
 function renderLanes() {
   const tbody = document.getElementById('lanes-table-body');
@@ -85,11 +109,12 @@ function renderLanes() {
   attachLaneHandlers();
 }
 
-/* ---------------- events ---------------- */
+/* ---------------- handlers ---------------- */
 
 function attachLaneHandlers() {
   document.querySelectorAll('#lanes-table-body tr').forEach(row => {
     const laneId = Number(row.dataset.laneId);
+
     const statusBtn = row.querySelector('.btn-status');
     const leagueSelect = row.querySelector('.lane-league-select');
     const modeSelect = row.querySelector('.lane-mode-select');
@@ -97,7 +122,7 @@ function attachLaneHandlers() {
     const openBtn = row.querySelector('.btn-open');
     const resetBtn = row.querySelector('.btn-reset');
 
-    // Toggle Active/Inactive
+    // Toggle Active
     statusBtn.onclick = (e) => {
       e.stopPropagation();
       const lane = getLane(laneId);
@@ -105,48 +130,45 @@ function attachLaneHandlers() {
       renderLanes();
     };
 
-    // League dropdown change
-    leagueSelect.onchange = (e) => {
-      e.stopPropagation();
+    // League selection
+    leagueSelect.onchange = () => {
       updateLane(laneId, { league: leagueSelect.value });
     };
 
-    // Mode change
-    modeSelect.onchange = (e) => {
-      e.stopPropagation();
+    // Mode selection
+    modeSelect.onchange = () => {
       updateLane(laneId, { mode: modeSelect.value });
       renderLanes();
     };
 
-    // Team change → assigns roster to that lane
-    teamSelect.onchange = (e) => {
-      e.stopPropagation();
+    // Team change (CSV-powered roster)
+    teamSelect.onchange = () => {
       const val = teamSelect.value;
       const teamId = val ? Number(val) : null;
+
       updateLane(laneId, {
         teamId,
-        players: [],          // clear cached players; lane.js / state.js will rebuild from team
+        players: [], // force rebuild from state.js auto-team sync
         currentPlayerIndex: 0
       });
+
       renderLanes();
     };
 
-    // Open lane button
-    openBtn.onclick = (e) => {
-      e.stopPropagation();
+    // Open lane
+    openBtn.onclick = () => {
       window.location.href = `lane.html?lane=${laneId}`;
     };
 
-    // Reset game
-    resetBtn.onclick = (e) => {
-      e.stopPropagation();
+    // Reset lane
+    resetBtn.onclick = () => {
       if (confirm(`Reset game on Lane ${laneId}?`)) {
         resetLane(laneId);
         renderLanes();
       }
     };
 
-    // Clicking the whole row (except on controls) opens lane
+    // Clicking row opens lane
     row.onclick = (e) => {
       const tag = e.target.tagName.toLowerCase();
       if (tag === 'button' || tag === 'select') return;
@@ -157,7 +179,7 @@ function attachLaneHandlers() {
 
 /* ---------------- init ---------------- */
 
-document.addEventListener('DOMContentLoaded', () => {
-  loadTeams();
+document.addEventListener('DOMContentLoaded', async () => {
+  await bootstrapFromCsv();
   renderLanes();
 });
