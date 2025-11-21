@@ -1,0 +1,15 @@
+{
+  "strike": [
+    "images/strike/strike1.png",
+    "images/strike/strike2.png",
+    "BowlingCenter/images/IMG_5219.gif"
+  ],
+  "spare": [
+    "images/spare/spare1.png",
+    "images/spare/spare2.png"
+  ],
+  "gutter": [
+    "images/gutter/gutter1.png",
+    "images/gutter/gutter_sad.gif"
+  ]
+}
