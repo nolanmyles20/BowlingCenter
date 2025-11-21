@@ -39,21 +39,18 @@ for (let i = 1; i <= 12; i++) {
 function loadState() {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return deepClone(DEFAULT_STATE);
-
-    const parsed = JSON.parse(raw);
     const state = deepClone(DEFAULT_STATE);
 
-    if (parsed.bowlers) state.bowlers = parsed.bowlers;
-    if (parsed.teams) state.teams = parsed.teams;
-    if (parsed.leagues) state.leagues = parsed.leagues; // keep leagues if present
-    if (parsed.lanes) {
-      Object.keys(parsed.lanes).forEach(k => {
-        state.lanes[k] = { ...state.lanes[k], ...parsed.lanes[k] };
-      });
+    if (raw) {
+      const parsed = JSON.parse(raw);
+
+      // Only restore lane-related data (status, selections, scores).
+      if (parsed.lanes) {
+        Object.keys(parsed.lanes).forEach(k => {
+          state.lanes[k] = { ...state.lanes[k], ...parsed.lanes[k] };
+        });
+      }
     }
-    if (parsed.nextBowlerId) state.nextBowlerId = parsed.nextBowlerId;
-    if (parsed.nextTeamId) state.nextTeamId = parsed.nextTeamId;
 
     // normalize lanes
     Object.values(state.lanes).forEach(normalizeLane);
@@ -64,6 +61,7 @@ function loadState() {
     return deepClone(DEFAULT_STATE);
   }
 }
+
 
 let state = loadState();
 
