@@ -1,17 +1,17 @@
 // js/bowlers.js
 import {
-  seedFromCSVsIfNeeded,
+  initStateFromCsv,
   listBowlers,
   createBowler,
   updateBowler,
   deleteBowler,
-  listLeagueNames
+  listLeagues
 } from './state.js';
 
 /* ---------- helpers ---------- */
 
 function buildLeagueOptions(selected) {
-  const leagues = listLeagueNames();
+  const leagues = listLeagues().map(l => l.name);
   let html = '<option value="">-- None --</option>';
   leagues.forEach(name => {
     const sel = name === selected ? ' selected' : '';
@@ -25,9 +25,7 @@ function renderBowlerTable() {
   if (!tbody) return;
 
   const bowlers = listBowlers().slice().sort((a, b) => {
-    const na = (a.name || '').toLowerCase();
-    const nb = (b.name || '').toLowerCase();
-    return na.localeCompare(nb);
+    return (a.name || '').localeCompare(b.name || '');
   });
 
   tbody.innerHTML = '';
@@ -36,12 +34,13 @@ function renderBowlerTable() {
     const tr = document.createElement('tr');
     tr.dataset.id = b.id;
 
-    const name = b.name || `${b.firstName || ''} ${b.lastName || ''}`.trim() || 'Unknown';
+    // new fields supported from CSV
+    const name = b.name || 'Unknown';
     const gender = b.gender || '';
-    const handicap = b.handicap ?? 0;
-    const league = b.league || '';
     const avg = b.average ?? '';
+    const handicap = b.handicap ?? 0;
     const games = b.games ?? '';
+    const league = b.league || '';
 
     tr.innerHTML = `
       <td>${name}</td>
@@ -67,18 +66,17 @@ function attachBowlerRowHandlers() {
     btn.onclick = () => {
       const row = btn.closest('tr');
       const id = row.dataset.id;
-      const bowlers = listBowlers();
-      const b = bowlers.find(x => String(x.id) === String(id));
+      const b = listBowlers().find(x => String(x.id) === String(id));
       if (!b) return;
 
       document.getElementById('bowler-id').value = b.id;
-      document.getElementById('bowler-name').value =
-        b.name || `${b.firstName || ''} ${b.lastName || ''}`.trim();
+      document.getElementById('bowler-name').value = b.name || '';
       document.getElementById('bowler-gender').value = b.gender || '';
       document.getElementById('bowler-handicap').value = b.handicap ?? 0;
 
       const leagueSelect = document.getElementById('bowler-league');
       leagueSelect.innerHTML = buildLeagueOptions(b.league || '');
+
       document.getElementById('bowler-form-title').textContent = 'Edit Bowler';
       document.getElementById('btn-save-bowler').textContent = 'Update Bowler';
       document.getElementById('btn-cancel-edit').style.display = 'inline-block';
@@ -99,10 +97,9 @@ function attachBowlerRowHandlers() {
 /* ---------- init ---------- */
 
 document.addEventListener('DOMContentLoaded', async () => {
-  // Make sure CSV data has been imported into state first
-  await seedFromCSVsIfNeeded();
+  // load CSV → populate state
+  await initStateFromCsv();
 
-  // League dropdown
   const leagueSelect = document.getElementById('bowler-league');
   if (leagueSelect) {
     leagueSelect.innerHTML = buildLeagueOptions('');
@@ -150,5 +147,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.getElementById('bowler-form-title').textContent = 'Add Bowler';
     document.getElementById('btn-save-bowler').textContent = 'Save Bowler';
     cancelBtn.style.display = 'none';
+
+    renderBowlerTable();
   });
 });
