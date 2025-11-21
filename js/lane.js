@@ -974,6 +974,8 @@ function setGame(laneId, gameNum) {
 --------------------------------------------------------- */
 
 document.addEventListener('DOMContentLoaded', async () => {
+   // Make sure CSV data is loaded into state before we touch lanes/teams/bowlers
+  await seedFromCSVsIfNeeded();
   applyTheme(loadTheme());
 
   // Make sure CSV data is loaded into state before we touch lanes/teams/bowlers
