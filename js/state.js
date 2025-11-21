@@ -348,17 +348,14 @@ export function setTeamRoster(teamId, bowlerIds) {
  * leaguesRows: [{ name, hcpBase? }, ...]
  */
 export function initStateFromCsv(bowlersRows = [], teamsRows = [], leaguesRows = []) {
-  // If we already have data, do not override user’s saved localStorage.
-  const hasAnyData =
-    state.leagues = {};
-    state.bowlers = {};
-    state.teams = {};
-    state.nextBowlerId = 1;
-    state.nextTeamId = 1;
+  // Always rebuild leagues, bowlers, and teams from CSV.
+  // Lanes (and their scoring) from localStorage are preserved.
 
-  if (hasAnyData) {
-    return;
-  }
+  state.leagues = {};
+  state.bowlers = {};
+  state.teams = {};
+  state.nextBowlerId = 1;
+  state.nextTeamId = 1;
 
   // --- Leagues ---
   if (Array.isArray(leaguesRows)) {
@@ -378,20 +375,26 @@ export function initStateFromCsv(bowlersRows = [], teamsRows = [], leaguesRows =
   // --- Bowlers ---
   let maxBowlerId = 0;
   if (Array.isArray(bowlersRows)) {
-    bowlersRows.forEach(row => {
+    bowlersRows.forEach((row, idx) => {
       if (!row) return;
-      let id = Number(row.id);
-      if (!Number.isFinite(id) || id <= 0) {
-        id = maxBowlerId + 1;
-      }
-      maxBowlerId = Math.max(maxBowlerId, id);
+
+      const name = (row.name || '').trim();
+      if (!name) return;
+
+      const league = (row.league || '').trim();
+      const gender = (row.gender || '').trim();
+      const handicap = parseInt(row.handicap || '0', 10) || 0;
+
+      let id = row.id ? parseInt(row.id, 10) : idx + 1;
+      if (!Number.isFinite(id) || id <= 0) id = idx + 1;
+      if (id > maxBowlerId) maxBowlerId = id;
 
       state.bowlers[String(id)] = {
         id,
-        name: row.name || `Bowler ${id}`,
-        gender: row.gender || '',
-        handicap: Number.isFinite(Number(row.handicap)) ? Number(row.handicap) : 0,
-        league: row.league || ''
+        name,
+        gender,
+        handicap,
+        league
       };
     });
   }
@@ -400,26 +403,18 @@ export function initStateFromCsv(bowlersRows = [], teamsRows = [], leaguesRows =
   // --- Teams ---
   let maxTeamId = 0;
   if (Array.isArray(teamsRows)) {
-    teamsRows.forEach(row => {
+    teamsRows.forEach((row, idx) => {
       if (!row) return;
-      let id = Number(row.id);
-      if (!Number.isFinite(id) || id <= 0) {
-        id = maxTeamId + 1;
-      }
-      maxTeamId = Math.max(maxTeamId, id);
 
-      // Try to read up to 4 bowler id fields from CSV
+      let id = row.id ? parseInt(row.id, 10) : idx + 1;
+      if (!Number.isFinite(id) || id <= 0) id = idx + 1;
+      if (id > maxTeamId) maxTeamId = id;
+
       const bowlerIds = [];
-      const bowlerKeys = [
-        'bowler1Id', 'bowler2Id', 'bowler3Id', 'bowler4Id',
-        'bowler1', 'bowler2', 'bowler3', 'bowler4'
-      ];
-      bowlerKeys.forEach(k => {
-        if (row[k] !== undefined && row[k] !== null && row[k] !== '') {
-          const bid = Number(row[k]);
-          if (Number.isFinite(bid)) bowlerIds.push(bid);
-        }
-      });
+      if (row.bowler1Id) bowlerIds.push(Number(row.bowler1Id));
+      if (row.bowler2Id) bowlerIds.push(Number(row.bowler2Id));
+      if (row.bowler3Id) bowlerIds.push(Number(row.bowler3Id));
+      if (row.bowler4Id) bowlerIds.push(Number(row.bowler4Id));
 
       state.teams[String(id)] = {
         id,
