@@ -1,5 +1,6 @@
 // js/lane.js
 import {
+  initStateFromCsv,
   getLane,
   getState,
   saveState,
@@ -971,8 +972,11 @@ function setGame(laneId, gameNum) {
    Init
 --------------------------------------------------------- */
 
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
   applyTheme(loadTheme());
+
+  // Make sure CSV data is loaded into state before we touch lanes/teams/bowlers
+  await initStateFromCsv();
 
   const laneId = getLaneIdFromQuery();
   const lane = getLane(laneId);
