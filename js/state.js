@@ -8,14 +8,20 @@ function deepClone(obj) {
   return JSON.parse(JSON.stringify(obj));
 }
 
-function toInt(val, def = 0) {
-  const n = parseInt(val, 10);
-  return Number.isNaN(n) ? def : n;
-}
-
-function toFloat(val, def = 0) {
-  const n = parseFloat(val);
-  return Number.isNaN(n) ? def : n;
+// Very small CSV parser (comma-separated, header row)
+function parseCsv(text) {
+  if (!text) return [];
+  const lines = text.trim().split(/\r?\n/).filter(l => l.trim().length);
+  if (!lines.length) return [];
+  const headers = lines[0].split(',').map(h => h.trim());
+  return lines.slice(1).map(line => {
+    const cols = line.split(',');
+    const row = {};
+    headers.forEach((h, idx) => {
+      row[h] = (cols[idx] ?? '').trim();
+    });
+    return row;
+  });
 }
 
 // ---------- default state ----------
@@ -24,7 +30,7 @@ const DEFAULT_STATE = {
   lanes: {},
   bowlers: {},
   teams: {},
-  leagues: {},          // leagues store for hcp base etc
+  leagues: {},          // store leagues + hcp base, etc
   nextBowlerId: 1,
   nextTeamId: 1
 };
@@ -133,7 +139,7 @@ function syncLanePlayersFromTeam(lane) {
     const b = state.bowlers[String(bid)];
     const base = {
       bowlerId: bid,
-      name: b ? (b.name || b.display_name || `Bowler ${idx + 1}`) : `Bowler ${idx + 1}`,
+      name: b ? b.name : `Bowler ${idx + 1}`,
       handicap: b ? (b.handicap || 0) : 0,
       absent: false,
       games: [
@@ -317,213 +323,6 @@ export function deleteBowler(id) {
   saveState();
 }
 
-// ---------- CSV seeding for leagues / bowlers / teams / rosters ----------
-
-async function loadCSV(url) {
-  try {
-    const res = await fetch(url, { cache: 'no-store' });
-    if (!res.ok) {
-      console.warn('CSV fetch failed:', url, res.status);
-      return [];
-    }
-    const text = await res.text();
-
-    const lines = text.split(/\r?\n/);
-    let headerLine = '';
-    const dataLines = [];
-
-    for (const rawLine of lines) {
-      const line = rawLine.trim();
-      if (!line) continue;
-      if (!headerLine) {
-        headerLine = line;
-      } else {
-        dataLines.push(line);
-      }
-    }
-
-    if (!headerLine) return [];
-    const headers = headerLine.split(',').map(h => h.trim());
-
-    return dataLines.map(line => {
-      const cols = line.split(',');
-      const obj = {};
-      headers.forEach((h, i) => {
-        if (!h) return; // ignore blank header column
-        obj[h] = (cols[i] || '').trim();
-      });
-      return obj;
-    });
-  } catch (err) {
-    console.warn('CSV fetch error for', url, err);
-    return [];
-  }
-}
-
-let csvSeedPromise = null;
-
-/**
- * Load leagues.csv, bowlers.csv, teams.csv, team_roster.csv
- * and push them into state.bowlers / state.teams / state.leagues.
- * LANE SCORES ARE PRESERVED.
- */
-export function seedFromCSVsIfNeeded() {
-  if (csvSeedPromise) return csvSeedPromise;
-
-  csvSeedPromise = (async () => {
-    try {
-      const [leagueRows, bowlerRows, teamRows, rosterRows] = await Promise.all([
-        loadCSV('data/leagues.csv'),
-        loadCSV('data/bowlers.csv'),
-        loadCSV('data/teams.csv'),
-        loadCSV('data/team_roster.csv')
-      ]);
-
-      if (!leagueRows.length && !bowlerRows.length && !teamRows.length) {
-        // Nothing to seed; probably running without CSVs
-        return;
-      }
-
-      // Preserve lane scores
-      const lanesRef = state.lanes;
-
-      // Reset core entities from CSV
-      state.bowlers = {};
-      state.teams = {};
-      state.leagues = {};
-      state.nextBowlerId = 1;
-      state.nextTeamId = 1;
-      state.lanes = lanesRef;
-
-      // ---- Leagues ----
-      leagueRows.forEach(row => {
-        const name = (row.league || '').trim();
-        if (!name) return;
-        const hcpBaseVal = toInt(row.hdcp_base, 210);
-        state.leagues[name] = {
-          id: row.league_id || name,
-          name,
-          average: toFloat(row.average, 0),
-          hcp: toInt(row.hdcp, 0),
-          hcpBase: hcpBaseVal || 210,
-          hcpPercent: toInt(row.hdcp_percent, 0),
-          hcpMax: toInt(row.hdcp_max, 0),
-          hcpMin: toInt(row.hdcp_min, 0),
-          games: toInt(row.games, 0)
-        };
-      });
-
-      // ---- Bowlers ----
-      const bowlerKeyToId = {};
-      bowlerRows.forEach(row => {
-        const first = (row.first_name || '').trim();
-        const last = (row.last_name || '').trim();
-        const nameFromParts = `${first} ${last}`.trim();
-        const display = (row.display_name || '').trim() || nameFromParts || 'Unknown';
-
-        const idNum = state.nextBowlerId++;
-
-        const bObj = {
-          id: idNum,
-          bowlerKey: (row.bowler_id || '').trim(),
-          firstName: first,
-          lastName: last,
-          name: display,
-          gender: (row.gender || '').trim(),
-          street: (row.street || '').trim(),
-          street2: (row.street2 || '').trim(),
-          city: (row.city || '').trim(),
-          state: (row.state || '').trim(),
-          zip: (row.zip || '').trim(),
-          phone: (row.phone || '').trim(),
-          average: toInt(row.average, 0),
-          handicap: toInt(row.hdcp, 0),
-          hcpBase: toInt(row.hdcp_base, 0),
-          hcpPercent: toInt(row.hdcp_percent, 0),
-          hcpMax: toInt(row.hdcp_max, 0),
-          hcpMin: toInt(row.hdcp_min, 0),
-          games: toInt(row.games, 0),
-          payStatus: (row.pay_stat || '').trim(),
-          note: (row.note || '').trim(),
-          league: (row.league || '').trim()
-        };
-
-        state.bowlers[String(idNum)] = bObj;
-        if (bObj.bowlerKey) {
-          bowlerKeyToId[bObj.bowlerKey] = idNum;
-        }
-      });
-
-      // ---- Teams ----
-      const teamKeyToId = {};
-      teamRows.forEach(row => {
-        const leagueId = (row.league_id || '').trim();
-        const leagueName = (row.league || '').trim();
-        const teamNum = (row.team_number || '').trim();
-        const teamName = (row.team_name || '').trim() || `Team ${teamNum || state.nextTeamId}`;
-
-        const idNum = state.nextTeamId++;
-
-        const leagueText =
-          leagueName ||
-          (Object.values(state.leagues).find(lg => lg.id === leagueId)?.name || '');
-
-        state.teams[String(idNum)] = {
-          id: idNum,
-          name: teamName,
-          league: leagueText,
-          leagueId,
-          teamNumber: teamNum,
-          bowlerIds: []
-        };
-
-        const key = `${leagueId}:${teamNum}`;
-        teamKeyToId[key] = idNum;
-      });
-
-      // ---- Rosters ----
-      const rosterByTeamId = {};
-      rosterRows.forEach(row => {
-        const leagueId = (row.league_id || '').trim();
-        const teamNum = (row.team_number || '').trim();
-        const bowlerKey = (row.bowler_id || '').trim();
-        if (!leagueId || !teamNum || !bowlerKey) return;
-
-        const teamKey = `${leagueId}:${teamNum}`;
-        const teamId = teamKeyToId[teamKey];
-        if (!teamId) return;
-
-        const bowlerIdNum = bowlerKeyToId[bowlerKey];
-        if (!bowlerIdNum) return;
-
-        const pos = toInt(row.position, 0);
-        if (!rosterByTeamId[teamId]) rosterByTeamId[teamId] = [];
-        rosterByTeamId[teamId].push({ pos, bowlerIdNum });
-      });
-
-      Object.entries(rosterByTeamId).forEach(([teamIdStr, entries]) => {
-        entries.sort((a, b) => a.pos - b.pos);
-        state.teams[teamIdStr].bowlerIds = entries.map(e => e.bowlerIdNum);
-      });
-
-      saveState();
-    } catch (err) {
-      console.warn('CSV seeding failed:', err);
-    }
-  })();
-
-  return csvSeedPromise;
-}
-
-// convenience for building league dropdowns
-export function listLeagues() {
-  return Object.values(state.leagues || {});
-}
-
-export function listLeagueNames() {
-  return Object.keys(state.leagues || {});
-}
-
 // ---------- teams ----------
 
 export function listTeams() {
@@ -564,4 +363,188 @@ export function setTeamRoster(teamId, bowlerIds) {
   state.teams[key].bowlerIds = bowlerIds.map(Number);
   saveState();
   return state.teams[key];
+}
+
+// ---------- CSV INIT ----------
+
+const CSV_PATHS = {
+  leagues: 'data/leagues.csv',
+  bowlers: 'data/bowlers.csv',
+  teams: 'data/teams.csv',
+  roster: 'data/team_roster.csv'
+};
+
+let csvInitialized = false;
+let csvInitPromise = null;
+
+/**
+ * Load leagues, bowlers, teams, and team rosters from CSV files
+ * and populate state.leagues / state.bowlers / state.teams.
+ *
+ * Safe to call multiple times: the actual work happens once.
+ */
+export function initStateFromCsv() {
+  if (csvInitialized) return Promise.resolve();
+  if (csvInitPromise) return csvInitPromise;
+
+  csvInitPromise = (async () => {
+    try {
+      const [leaguesRes, bowlersRes, teamsRes, rosterRes] = await Promise.all([
+        fetch(CSV_PATHS.leagues).catch(() => null),
+        fetch(CSV_PATHS.bowlers).catch(() => null),
+        fetch(CSV_PATHS.teams).catch(() => null),
+        fetch(CSV_PATHS.roster).catch(() => null)
+      ]);
+
+      const leaguesText = leaguesRes && leaguesRes.ok ? await leaguesRes.text() : '';
+      const bowlersText = bowlersRes && bowlersRes.ok ? await bowlersRes.text() : '';
+      const teamsText   = teamsRes && teamsRes.ok   ? await teamsRes.text()   : '';
+      const rosterText  = rosterRes && rosterRes.ok ? await rosterRes.text()  : '';
+
+      const leagueRows = parseCsv(leaguesText);
+      const bowlerRows = parseCsv(bowlersText);
+      const teamRows   = parseCsv(teamsText);
+      const rosterRows = parseCsv(rosterText);
+
+      // --- Leagues ---
+      const leagues = {};
+      leagueRows.forEach(row => {
+        const name = row.name || row.league_name || row.League || '';
+        if (!name) return;
+        const id = row.league_id || row.id || name;
+        const hcpBase =
+          row.hcp_base ? Number(row.hcp_base) :
+          row.hdcp_base ? Number(row.hdcp_base) :
+          210;
+
+        leagues[name] = {
+          id,
+          name,
+          season: row.season || '',
+          centerId: row.center_id || '',
+          hcpBase: Number.isFinite(hcpBase) ? hcpBase : 210
+        };
+      });
+
+      // --- Bowlers ---
+      const bowlers = {};
+      let maxBowlerNum = 0;
+
+      bowlerRows.forEach(row => {
+        const bowlerIdRaw = row.bowler_id || row.id || '';
+        if (!bowlerIdRaw) return;
+
+        // handle IDs like b001 → 1
+        const numMatch = String(bowlerIdRaw).match(/\d+/);
+        const numericId = numMatch ? Number(numMatch[0]) : Number(bowlerIdRaw) || 0;
+        if (numericId > maxBowlerNum) maxBowlerNum = numericId;
+
+        const first = row.first_name || row.FirstName || '';
+        const last  = row.last_name  || row.LastName  || '';
+        const name = (first + ' ' + last).trim() || bowlerIdRaw;
+
+        const gender = row.gender || row.Gender || '';
+
+        // Try to pull handicap from any reasonable column
+        let handicap = 0;
+        const hPins = row.hdcp_pins || row.handicap || row.hcp || row.HDCP || '';
+        if (hPins !== '') {
+          const hNum = Number(hPins);
+          if (Number.isFinite(hNum)) handicap = hNum;
+        }
+
+        const leagueName = row.league_name || row.league || '';
+
+        bowlers[String(numericId)] = {
+          id: numericId,
+          name,
+          gender,
+          handicap,
+          league: leagueName
+        };
+      });
+
+      // --- Teams ---
+      const teams = {};
+      let maxTeamNum = 0;
+
+      teamRows.forEach(row => {
+        const teamIdRaw = row.team_id || row.id || '';
+        if (!teamIdRaw) return;
+
+        const numMatch = String(teamIdRaw).match(/\d+/);
+        const numericId = numMatch ? Number(numMatch[0]) : Number(teamIdRaw) || 0;
+        if (numericId > maxTeamNum) maxTeamNum = numericId;
+
+        const name = row.team_name || row.name || row.Team || `Team ${numericId}`;
+        const leagueName = row.league_name || row.league || '';
+
+        teams[String(numericId)] = {
+          id: numericId,
+          name,
+          league: leagueName,
+          bowlerIds: []
+        };
+      });
+
+      // --- Team roster (team -> bowler IDs) ---
+      rosterRows.forEach(row => {
+        const teamRaw = row.team_id || row.team || row.TeamID || '';
+        const bowlerRaw = row.bowler_id || row.bowler || row.BowlerID || '';
+        if (!teamRaw || !bowlerRaw) return;
+
+        const tMatch = String(teamRaw).match(/\d+/);
+        const teamId = tMatch ? Number(tMatch[0]) : Number(teamRaw) || 0;
+        const bMatch = String(bowlerRaw).match(/\d+/);
+        const bowlerId = bMatch ? Number(bMatch[0]) : Number(bowlerRaw) || 0;
+        if (!teamId || !bowlerId) return;
+
+        if (!teams[String(teamId)]) {
+          teams[String(teamId)] = {
+            id: teamId,
+            name: `Team ${teamId}`,
+            league: '',
+            bowlerIds: []
+          };
+          if (teamId > maxTeamNum) maxTeamNum = teamId;
+        }
+
+        if (!bowlers[String(bowlerId)]) {
+          // orphan bowler in roster with no row – create minimal record
+          bowlers[String(bowlerId)] = {
+            id: bowlerId,
+            name: `Bowler ${bowlerId}`,
+            gender: '',
+            handicap: 0,
+            league: ''
+          };
+          if (bowlerId > maxBowlerNum) maxBowlerNum = bowlerId;
+        }
+
+        const arr = teams[String(teamId)].bowlerIds;
+        if (!arr.includes(bowlerId)) arr.push(bowlerId);
+      });
+
+      // --- Merge into state (CSV is source of truth for these) ---
+      state.leagues = leagues;
+      state.bowlers = bowlers;
+      state.teams   = teams;
+
+      // Make sure next IDs won't collide
+      if (maxBowlerNum >= 1) state.nextBowlerId = maxBowlerNum + 1;
+      if (maxTeamNum >= 1)   state.nextTeamId   = maxTeamNum + 1;
+
+      // Normalize lanes now that teams/bowlers exist
+      Object.values(state.lanes).forEach(normalizeLane);
+
+      saveState();
+      csvInitialized = true;
+    } catch (err) {
+      console.error('Error initializing from CSV:', err);
+      csvInitialized = false;   // allow retry
+      csvInitPromise = null;
+    }
+  })();
+
+  return csvInitPromise;
 }
