@@ -1,231 +1,154 @@
 // js/bowlers.js
 import {
+  seedFromCSVsIfNeeded,
   listBowlers,
   createBowler,
   updateBowler,
   deleteBowler,
-  getState
-} from "./state.js";
+  listLeagueNames
+} from './state.js';
 
-const BOWLERS_CSV_URL = "data/bowlers.csv"; // full CSV with all fields
+/* ---------- helpers ---------- */
 
-/* ============================================
-   CSV PARSER
-============================================ */
-function parseCsv(text) {
-  const lines = text.trim().split(/\r?\n/);
-  if (!lines.length) return [];
-
-  const header = lines[0].split(",").map(h => h.trim());
-  const rows = [];
-
-  for (let i = 1; i < lines.length; i++) {
-    const cols = lines[i].split(",");
-    const obj = {};
-    header.forEach((h, idx) => {
-      obj[h] = (cols[idx] || "").trim();
-    });
-    rows.push(obj);
-  }
-  return rows;
-}
-
-/* ============================================
-   INITIAL CSV SEED
-============================================ */
-async function seedBowlersFromCsvIfEmpty() {
-  const existing = listBowlers();
-  if (existing.length > 0) return;
-
-  try {
-    const resp = await fetch(BOWLERS_CSV_URL);
-    if (!resp.ok) return;
-
-    const text = await resp.text();
-    const rows = parseCsv(text);
-
-    rows.forEach((r, index) => {
-      const name = `${r.first_name || ""} ${r.last_name || ""}`.trim();
-
-      createBowler({
-        id: index + 1,
-        name,
-        gender: r.gender || "",
-        handicap: Number(r.HCP || 0),
-        league: r.Team || "",
-        // all extra fields stored:
-        teamNumber: r.Team# || "",
-        posNumber: r.Pos# || "",
-        pins: r.Pins || "",
-        games: r.Games || "",
-        avg: r.Avg || "",
-        enteringAvg: r.EnteringAvg || "",
-        hhg: r.HHG || "",
-        hhs: r.HHS || "",
-        hsg: r.HSG || "",
-        hss: r.HSS || "",
-        mib: r.MIB || ""
-      });
-    });
-  } catch (e) {
-    console.warn("Could not load bowlers CSV:", e);
-  }
-}
-
-/* ============================================
-   Render League Dropdown
-============================================ */
-function populateLeagueSelect(selected = "") {
-  const state = getState();
-  const leagues = Object.keys(state.leagues || {});
-  const LEAGUES_DEFAULT = ["Open Bowling", "Tuesday Mixed", "Men's League", "Women's League", "Youth League"];
-
-  const all = Array.from(new Set([...LEAGUES_DEFAULT, ...leagues]));
-
-  const sel = document.getElementById("bowler-league");
-  sel.innerHTML = `<option value="">-- None --</option>`;
-
-  all.forEach(lg => {
-    const opt = document.createElement("option");
-    opt.value = lg;
-    opt.textContent = lg;
-    if (lg === selected) opt.selected = true;
-    sel.appendChild(opt);
+function buildLeagueOptions(selected) {
+  const leagues = listLeagueNames();
+  let html = '<option value="">-- None --</option>';
+  leagues.forEach(name => {
+    const sel = name === selected ? ' selected' : '';
+    html += `<option value="${name}"${sel}>${name}</option>`;
   });
+  return html;
 }
 
-/* ============================================
-   Render Table of All Bowlers
-============================================ */
-function renderTable() {
-  const tbody = document.getElementById("bowler-table-body");
-  tbody.innerHTML = "";
+function renderBowlerTable() {
+  const tbody = document.getElementById('bowler-table-body');
+  if (!tbody) return;
 
-  const bowlers = listBowlers();
+  const bowlers = listBowlers().slice().sort((a, b) => {
+    const na = (a.name || '').toLowerCase();
+    const nb = (b.name || '').toLowerCase();
+    return na.localeCompare(nb);
+  });
+
+  tbody.innerHTML = '';
 
   bowlers.forEach(b => {
-    const tr = document.createElement("tr");
+    const tr = document.createElement('tr');
     tr.dataset.id = b.id;
 
+    const name = b.name || `${b.firstName || ''} ${b.lastName || ''}`.trim() || 'Unknown';
+    const gender = b.gender || '';
+    const handicap = b.handicap ?? 0;
+    const league = b.league || '';
+    const avg = b.average ?? '';
+    const games = b.games ?? '';
+
     tr.innerHTML = `
-      <td>${b.name}</td>
-      <td>${b.gender || ""}</td>
-      <td>${b.handicap || 0}</td>
-      <td>${b.league || ""}</td>
-
-      <td>${b.teamNumber || ""}</td>
-      <td>${b.posNumber || ""}</td>
-      <td>${b.pins || ""}</td>
-      <td>${b.games || ""}</td>
-      <td>${b.avg || ""}</td>
-      <td>${b.enteringAvg || ""}</td>
-      <td>${b.hhg || ""}</td>
-      <td>${b.hhs || ""}</td>
-      <td>${b.hsg || ""}</td>
-      <td>${b.hss || ""}</td>
-      <td>${b.mib || ""}</td>
-
+      <td>${name}</td>
+      <td>${gender}</td>
+      <td>${avg}</td>
+      <td>${handicap}</td>
+      <td>${games}</td>
+      <td>${league}</td>
       <td>
         <button class="btn-small btn-edit">Edit</button>
-        <button class="btn-small btn-secondary btn-delete">Delete</button>
+        <button class="btn-small btn-delete">Delete</button>
       </td>
     `;
 
     tbody.appendChild(tr);
   });
 
-  attachRowHandlers();
+  attachBowlerRowHandlers();
 }
 
-/* ============================================
-   Row Button Handlers
-============================================ */
-function attachRowHandlers() {
-  const tbody = document.getElementById("bowler-table-body");
+function attachBowlerRowHandlers() {
+  document.querySelectorAll('.btn-edit').forEach(btn => {
+    btn.onclick = () => {
+      const row = btn.closest('tr');
+      const id = row.dataset.id;
+      const bowlers = listBowlers();
+      const b = bowlers.find(x => String(x.id) === String(id));
+      if (!b) return;
 
-  tbody.querySelectorAll("tr").forEach(tr => {
-    const id = Number(tr.dataset.id);
-    const bowler = listBowlers().find(b => b.id === id);
+      document.getElementById('bowler-id').value = b.id;
+      document.getElementById('bowler-name').value =
+        b.name || `${b.firstName || ''} ${b.lastName || ''}`.trim();
+      document.getElementById('bowler-gender').value = b.gender || '';
+      document.getElementById('bowler-handicap').value = b.handicap ?? 0;
 
-    const editBtn = tr.querySelector(".btn-edit");
-    const deleteBtn = tr.querySelector(".btn-delete");
-
-    editBtn.onclick = (e) => {
-      e.stopPropagation();
-      openFormForEdit(bowler);
+      const leagueSelect = document.getElementById('bowler-league');
+      leagueSelect.innerHTML = buildLeagueOptions(b.league || '');
+      document.getElementById('bowler-form-title').textContent = 'Edit Bowler';
+      document.getElementById('btn-save-bowler').textContent = 'Update Bowler';
+      document.getElementById('btn-cancel-edit').style.display = 'inline-block';
     };
+  });
 
-    deleteBtn.onclick = (e) => {
-      e.stopPropagation();
-      if (confirm(`Delete ${bowler.name}?`)) {
-        deleteBowler(id);
-        renderTable();
-        resetForm();
-      }
+  document.querySelectorAll('.btn-delete').forEach(btn => {
+    btn.onclick = () => {
+      const row = btn.closest('tr');
+      const id = row.dataset.id;
+      if (!confirm('Delete this bowler?')) return;
+      deleteBowler(id);
+      renderBowlerTable();
     };
   });
 }
 
-/* ============================================
-   Form Handling
-============================================ */
-function resetForm() {
-  document.getElementById("bowler-id").value = "";
-  document.getElementById("bowler-name").value = "";
-  document.getElementById("bowler-gender").value = "";
-  document.getElementById("bowler-handicap").value = 0;
+/* ---------- init ---------- */
 
-  populateLeagueSelect("");
+document.addEventListener('DOMContentLoaded', async () => {
+  // Make sure CSV data has been imported into state first
+  await seedFromCSVsIfNeeded();
 
-  document.getElementById("bowler-form-title").textContent = "Add Bowler";
-  document.getElementById("btn-cancel-edit").style.display = "none";
-}
-
-function openFormForEdit(b) {
-  document.getElementById("bowler-id").value = b.id;
-  document.getElementById("bowler-name").value = b.name;
-  document.getElementById("bowler-gender").value = b.gender || "";
-  document.getElementById("bowler-handicap").value = b.handicap || 0;
-
-  populateLeagueSelect(b.league || "");
-
-  document.getElementById("bowler-form-title").textContent = "Edit Bowler";
-  document.getElementById("btn-cancel-edit").style.display = "inline-block";
-}
-
-function onSave(e) {
-  e.preventDefault();
-
-  const id = document.getElementById("bowler-id").value;
-  const name = document.getElementById("bowler-name").value.trim();
-  const gender = document.getElementById("bowler-gender").value;
-  const handicap = Number(document.getElementById("bowler-handicap").value);
-  const league = document.getElementById("bowler-league").value;
-
-  if (!name) {
-    alert("Name is required.");
-    return;
+  // League dropdown
+  const leagueSelect = document.getElementById('bowler-league');
+  if (leagueSelect) {
+    leagueSelect.innerHTML = buildLeagueOptions('');
   }
 
-  if (id) {
-    updateBowler(Number(id), { name, gender, handicap, league });
-  } else {
-    createBowler({ name, gender, handicap, league });
-  }
+  renderBowlerTable();
 
-  resetForm();
-  renderTable();
-}
+  const form = document.getElementById('bowler-form');
+  const cancelBtn = document.getElementById('btn-cancel-edit');
 
-/* ============================================
-   Init
-============================================ */
-document.addEventListener("DOMContentLoaded", async () => {
-  await seedBowlersFromCsvIfEmpty();
+  form.addEventListener('submit', (e) => {
+    e.preventDefault();
 
-  populateLeagueSelect();
-  renderTable();
+    const idVal = document.getElementById('bowler-id').value;
+    const name = document.getElementById('bowler-name').value.trim();
+    const gender = document.getElementById('bowler-gender').value;
+    const handicap = parseInt(document.getElementById('bowler-handicap').value, 10) || 0;
+    const league = document.getElementById('bowler-league').value;
 
-  document.getElementById("bowler-form").addEventListener("submit", onSave);
-  document.getElementById("btn-cancel-edit").addEventListener("click", resetForm);
+    if (!name) {
+      alert('Name is required');
+      return;
+    }
+
+    const payload = { name, gender, handicap, league };
+
+    if (idVal) {
+      updateBowler(idVal, payload);
+    } else {
+      createBowler(payload);
+    }
+
+    form.reset();
+    document.getElementById('bowler-id').value = '';
+    document.getElementById('bowler-form-title').textContent = 'Add Bowler';
+    document.getElementById('btn-save-bowler').textContent = 'Save Bowler';
+    cancelBtn.style.display = 'none';
+
+    renderBowlerTable();
+  });
+
+  cancelBtn.addEventListener('click', () => {
+    form.reset();
+    document.getElementById('bowler-id').value = '';
+    document.getElementById('bowler-form-title').textContent = 'Add Bowler';
+    document.getElementById('btn-save-bowler').textContent = 'Save Bowler';
+    cancelBtn.style.display = 'none';
+  });
 });
