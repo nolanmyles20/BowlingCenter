@@ -158,7 +158,7 @@ function isPlayerGameComplete(rolls) {
       } else {
         if (i + 1 >= rolls.length) return false; // missing 2nd ball
         const r2 = rolls[i + 1] ?? 0;
-        // we don't enforce pin count here, scoring.js already does the real work
+        // don't enforce pin total here; scoring.js does that
         i += 2;
       }
     } else {
@@ -222,38 +222,37 @@ function getLeagueBaseForLane(lane) {
 }
 
 /* ---------------------------------------------------------
-   Auto-absent scoring
+   Auto-absent scoring (full game fill)
+   - For each marked-absent bowler, if their current game's
+     rolls are empty, we auto-fill all 10 frames with an
+     "average" open-frame game based on league base - handicap.
 --------------------------------------------------------- */
 
-function autoProcessAbsent(laneId) {
-  let safety = 0;
+function fillAbsentForCurrentGame(laneId) {
+  const lane = getLane(laneId);
+  const players = lane.players || [];
+  if (!players.length) return;
 
-  while (safety++ < 40) {
-    const lane = getLane(laneId);
-    const players = lane.players || [];
-    if (!players.length) break;
+  const gIndex = Math.max(0, Math.min(2, (lane.currentGame || 1) - 1));
+  const leagueBase = getLeagueBaseForLane(lane);
 
-    const currentIndex = lane.currentPlayerIndex || 0;
-    const player = players[currentIndex];
-    if (!player || !player.absent) break; // stop when we reach a present bowler
+  let changed = false;
 
-    const gIndex = Math.max(0, Math.min(2, (lane.currentGame || 1) - 1));
-    const games = player.games || [];
-    const game = games[gIndex] || { rolls: [] };
-    const rolls = Array.isArray(game.rolls) ? game.rolls : [];
+  players.forEach((p) => {
+    if (!p || !p.absent) return;
 
-    // if this player's game is already complete, just move on
-    if (isPlayerGameComplete(rolls)) {
-      advanceToNextPlayer(laneId);
-      continue;
-    }
+    const games = p.games || [];
+    if (!games[gIndex]) games[gIndex] = { rolls: [] };
+    const game = games[gIndex];
 
-    const laneNow = getLane(laneId);
-    const leagueBase = getLeagueBaseForLane(laneNow);
-    const hcp = player.handicap || 0;
-    const gameAverage = Math.max(0, leagueBase - hcp);
+    if (!Array.isArray(game.rolls)) game.rolls = [];
+    if (game.rolls.length > 0) return; // already filled for this game
+
+    const hcp = p.handicap || 0;
+    const gameAverage = Math.max(0, leagueBase - hcp); // average pins per game
     const perFrame = gameAverage / 10;
 
+    // simple open-frame model: two rolls adding up close to perFrame, never >10
     let r1 = Math.floor(perFrame * 0.6);
     if (r1 < 0) r1 = 0;
     if (r1 > 9) r1 = 9;
@@ -262,11 +261,16 @@ function autoProcessAbsent(laneId) {
     if (r2 < 0) r2 = 0;
     if (r1 + r2 > 10) r2 = 10 - r1;
 
-    addRollForCurrentPlayer(laneId, r1);
-    addRollForCurrentPlayer(laneId, r2);
+    const frameRolls = [];
+    for (let f = 1; f <= 10; f++) {
+      frameRolls.push(r1, r2);
+    }
 
-    advanceToNextPlayer(laneId);
-  }
+    game.rolls = frameRolls;
+    changed = true;
+  });
+
+  if (changed) saveState();
 }
 
 /* ---------------------------------------------------------
@@ -331,7 +335,7 @@ function buildSingleGameSummaryHtml(lane) {
   });
 
   return `
-    <table class="recap-table">
+    <table class="game-complete-table">
       <thead>
         <tr>
           <th>Bowler</th>
@@ -345,10 +349,17 @@ function buildSingleGameSummaryHtml(lane) {
   `;
 }
 
-// full 3-game + series summary (reusing series-recap logic)
+// full 3-game + series summary (with team totals)
 function buildSeriesSummaryHtml(lane) {
   const playersSrc = lane.players || [];
   let rows = '';
+
+  const teamTotals = {
+    gScr: [0, 0, 0],
+    gHcp: [0, 0, 0],
+    seriesScr: 0,
+    seriesHcp: 0
+  };
 
   playersSrc.forEach(src => {
     if (!src) return;
@@ -369,6 +380,15 @@ function buildSeriesSummaryHtml(lane) {
     const seriesScr = gScr[0] + gScr[1] + gScr[2];
     const seriesWithH = seriesScr + hcp * 3;
 
+    teamTotals.gScr[0] += gScr[0];
+    teamTotals.gScr[1] += gScr[1];
+    teamTotals.gScr[2] += gScr[2];
+    teamTotals.gHcp[0] += hcp;
+    teamTotals.gHcp[1] += hcp;
+    teamTotals.gHcp[2] += hcp;
+    teamTotals.seriesScr += seriesScr;
+    teamTotals.seriesHcp += hcp * 3;
+
     rows += `
       <tr>
         <td>${name}</td>
@@ -380,8 +400,20 @@ function buildSeriesSummaryHtml(lane) {
     `;
   });
 
+  const teamSeriesWithH = teamTotals.seriesScr + teamTotals.seriesHcp;
+
+  const teamRow = `
+    <tr>
+      <th>Team Totals</th>
+      <th>${teamTotals.gScr[0]}</th><th>${teamTotals.gScr[0] + teamTotals.gHcp[0]}</th>
+      <th>${teamTotals.gScr[1]}</th><th>${teamTotals.gScr[1] + teamTotals.gHcp[1]}</th>
+      <th>${teamTotals.gScr[2]}</th><th>${teamTotals.gScr[2] + teamTotals.gHcp[2]}</th>
+      <th>${teamTotals.seriesScr}</th><th>${teamSeriesWithH}</th>
+    </tr>
+  `;
+
   return `
-    <table class="recap-table">
+    <table class="game-complete-table">
       <thead>
         <tr>
           <th>Bowler</th>
@@ -392,6 +424,7 @@ function buildSeriesSummaryHtml(lane) {
         </tr>
       </thead>
       <tbody>${rows}</tbody>
+      <tfoot>${teamRow}</tfoot>
     </table>
   `;
 }
@@ -454,7 +487,7 @@ function startNextGameFromModal(laneId) {
     banner.classList.remove('hidden');
   }
 
-  autoProcessAbsent(laneId);
+  fillAbsentForCurrentGame(laneId);
   renderScore(laneId);
   renderPinButtons(getLane(laneId));
 }
@@ -502,8 +535,6 @@ function handleRoll(laneId, pins) {
   if (didLastRollCompleteFrame(rollsBefore, rollsAfter)) {
     advanceToNextPlayer(laneId);
   }
-
-  autoProcessAbsent(laneId);
 
   renderScore(laneId);
   renderPinButtons(getLane(laneId));
@@ -841,14 +872,13 @@ function closeMenu() {
 
 function handleMarkAbsent(laneId) {
   toggleCurrentPlayerAbsent(laneId);
-  autoProcessAbsent(laneId);
+  fillAbsentForCurrentGame(laneId);
   renderScore(laneId);
   renderPinButtons(getLane(laneId));
 }
 
 function handleSkipBowler(laneId) {
   advanceToNextPlayer(laneId);
-  autoProcessAbsent(laneId);
   renderScore(laneId);
   renderPinButtons(getLane(laneId));
 }
@@ -948,7 +978,7 @@ function saveSettingsFromForm() {
 
 function setGame(laneId, gameNum) {
   updateLane(laneId, { currentGame: gameNum });
-  autoProcessAbsent(laneId);
+  fillAbsentForCurrentGame(laneId);
   renderScore(laneId);
   renderPinButtons(getLane(laneId));
 
@@ -972,11 +1002,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
   renderLaneInfo(laneId);
 
-  autoProcessAbsent(laneId);
+  // pre-fill absents for the current game
+  fillAbsentForCurrentGame(laneId);
 
   renderScore(laneId);
   renderPinButtons(getLane(laneId));
-  checkAndHandleGameComplete(laneId);
 
   const toggleBtn = document.getElementById('view-toggle');
   if (toggleBtn) {
