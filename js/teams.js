@@ -1,352 +1,220 @@
 // js/teams.js
 import {
+  seedFromCSVsIfNeeded,
   listTeams,
   listBowlers,
   createTeam,
   updateTeam,
   deleteTeam,
   setTeamRoster,
-  getState
+  listLeagueNames
 } from './state.js';
 
-const LEAGUES = [
-  'Open Bowling',
-  'Tuesday Mixed',
-  "Men's League",
-  "Women\'s League",
-  'Youth League'
-];
+/* ---------- helpers ---------- */
 
-const TEAMS_CSV_URL = 'data/teams.csv'; // expected headers: team_id,team_name,league (extra columns ignored)
-
-/* ------------------------------------------------
-   Small CSV helper (very forgiving)
--------------------------------------------------- */
-
-function parseCsv(text) {
-  const lines = text.trim().split(/\r?\n/);
-  if (!lines.length) return [];
-  const headers = lines[0].split(',').map(h => h.trim());
-  const rows = [];
-
-  for (let i = 1; i < lines.length; i++) {
-    const line = lines[i].trim();
-    if (!line) continue;
-    const cols = line.split(',');
-    const obj = {};
-    headers.forEach((h, idx) => {
-      obj[h] = (cols[idx] || '').trim();
-    });
-    rows.push(obj);
-  }
-  return rows;
-}
-
-/* ------------------------------------------------
-   Seed teams from CSV if state has none
--------------------------------------------------- */
-
-async function seedTeamsFromCsvIfEmpty() {
-  const existing = listTeams();
-  if (existing && existing.length) return; // already have teams
-
-  try {
-    const resp = await fetch(TEAMS_CSV_URL);
-    if (!resp.ok) return;
-    const text = await resp.text();
-    const rows = parseCsv(text);
-
-    rows.forEach(row => {
-      // try a few possible header names
-      const name =
-        row.team_name ||
-        row.TeamName ||
-        row.name ||
-        row.Name ||
-        '';
-      const league =
-        row.league ||
-        row.League ||
-        row.league_name ||
-        '';
-
-      if (!name) return;
-      createTeam({ name, league });
-    });
-  } catch (err) {
-    console.warn('Could not seed teams from CSV:', err);
-  }
-}
-
-/* ------------------------------------------------
-   League select + bowler options
--------------------------------------------------- */
-
-function populateLeagueSelect(selectedLeague = '') {
-  const sel = document.getElementById('team-league');
-  if (!sel) return;
-
-  const state = getState();
-  const leagueKeys = Object.keys(state.leagues || {});
-  const allLeagues = Array.from(new Set([...LEAGUES, ...leagueKeys]));
-
-  sel.innerHTML = '<option value="">-- None --</option>';
-
-  allLeagues.forEach(lg => {
-    if (!lg) return;
-    const opt = document.createElement('option');
-    opt.value = lg;
-    opt.textContent = lg;
-    if (lg === selectedLeague) opt.selected = true;
-    sel.appendChild(opt);
+function buildLeagueOptions(selected) {
+  const leagues = listLeagueNames();
+  let html = '<option value="">-- None --</option>';
+  leagues.forEach(name => {
+    const sel = name === selected ? ' selected' : '';
+    html += `<option value="${name}"${sel}>${name}</option>`;
   });
+  return html;
 }
 
-function formatBowlerName(b) {
-  if (!b) return '';
-  if (b.name) return b.name;
-  const parts = [];
-  if (b.first_name) parts.push(b.first_name);
-  if (b.last_name) parts.push(b.last_name);
-  return parts.join(' ') || 'Bowler';
-}
-
-function populateRosterBowlers(selectedIds = []) {
-  const sel = document.getElementById('roster-bowlers');
-  if (!sel) return;
-
-  const bowlers = listBowlers();
-  const selectedSet = new Set(selectedIds.map(id => Number(id)));
-
-  // sort by last name if we can guess it, otherwise by name
-  bowlers.sort((a, b) => {
-    const an = (a.last_name || a.name || '').toLowerCase();
-    const bn = (b.last_name || b.name || '').toLowerCase();
-    if (an < bn) return -1;
-    if (an > bn) return 1;
-    return 0;
-  });
-
-  sel.innerHTML = '';
-
-  bowlers.forEach(b => {
-    const opt = document.createElement('option');
-    opt.value = b.id;
-    const name = formatBowlerName(b);
-    const leagueTag = b.league ? ` (${b.league})` : '';
-    opt.textContent = name + leagueTag;
-    if (selectedSet.has(Number(b.id))) {
-      opt.selected = true;
-    }
-    sel.appendChild(opt);
-  });
-}
-
-/* ------------------------------------------------
-   Team form helpers
--------------------------------------------------- */
-
-function resetTeamForm() {
-  document.getElementById('team-id').value = '';
-  document.getElementById('team-name').value = '';
-  populateLeagueSelect('');
-  document.getElementById('team-form-title').textContent = 'Add Team';
-  document.getElementById('btn-team-cancel').style.display = 'none';
-}
-
-function openFormForTeam(team) {
-  document.getElementById('team-id').value = team.id;
-  document.getElementById('team-name').value = team.name || '';
-  populateLeagueSelect(team.league || '');
-  document.getElementById('team-form-title').textContent = 'Edit Team';
-  document.getElementById('btn-team-cancel').style.display = 'inline-block';
-}
-
-/* ------------------------------------------------
-   Roster editor helpers
--------------------------------------------------- */
-
-let currentRosterTeamId = null;
-
-function openRosterEditor(team) {
-  currentRosterTeamId = team.id;
-  const panel = document.getElementById('roster-editor');
-  const title = document.getElementById('roster-title');
-  const nameEl = document.getElementById('roster-team-name');
-
-  if (title) title.textContent = 'Edit Roster';
-  if (nameEl) nameEl.textContent = team.name || '';
-  if (panel) panel.style.display = '';
-
-  const bowlerIds = (team.bowlerIds || []).map(Number);
-  populateRosterBowlers(bowlerIds);
-}
-
-function closeRosterEditor() {
-  const panel = document.getElementById('roster-editor');
-  if (panel) panel.style.display = 'none';
-  currentRosterTeamId = null;
-}
-
-/* ------------------------------------------------
-   Render teams table
--------------------------------------------------- */
-
-function renderTeams() {
+function renderTeamsTable() {
   const tbody = document.getElementById('teams-table-body');
   if (!tbody) return;
 
-  const teams = listTeams();
-  const bowlers = listBowlers();
-  const bowlerMap = new Map();
-  bowlers.forEach(b => bowlerMap.set(Number(b.id), b));
+  const teams = listTeams().slice().sort((a, b) => {
+    const na = (a.name || '').toLowerCase();
+    const nb = (b.name || '').toLowerCase();
+    return na.localeCompare(nb);
+  });
 
-  if (!teams.length) {
-    tbody.innerHTML = '<tr><td colspan="4">No teams yet. Add one above.</td></tr>';
-    return;
-  }
+  const bowlersById = {};
+  listBowlers().forEach(b => {
+    bowlersById[b.id] = b;
+  });
 
   tbody.innerHTML = '';
 
   teams.forEach(team => {
     const tr = document.createElement('tr');
-    tr.dataset.teamId = team.id;
+    tr.dataset.id = team.id;
 
-    const leagueText = team.league || '';
+    const league = team.league || '';
 
-    const rosterNames = (team.bowlerIds || [])
-      .map(id => {
-        const b = bowlerMap.get(Number(id));
-        return formatBowlerName(b);
-      })
-      .filter(Boolean)
-      .join(', ');
+    const rosterNames = (team.bowlerIds || []).map(id => {
+      const b = bowlersById[id];
+      if (!b) return '';
+      return b.name || `${b.firstName || ''} ${b.lastName || ''}`.trim();
+    }).filter(Boolean);
 
     tr.innerHTML = `
-      <td>${team.name || ''}</td>
-      <td>${leagueText}</td>
-      <td>${rosterNames || '<span style="color:#9ca3af;">(empty)</span>'}</td>
+      <td>${team.name}</td>
+      <td>${league}</td>
+      <td>${rosterNames.join(', ')}</td>
       <td>
-        <button class="btn-small btn-edit">Edit</button>
-        <button class="btn-small btn-roster">Roster</button>
-        <button class="btn-small btn-secondary btn-delete">Delete</button>
+        <button class="btn-small btn-team-edit">Edit</button>
+        <button class="btn-small btn-team-roster">Roster</button>
+        <button class="btn-small btn-team-delete">Delete</button>
       </td>
     `;
 
     tbody.appendChild(tr);
   });
 
-  attachRowHandlers();
+  attachTeamRowHandlers();
 }
 
-/* ------------------------------------------------
-   Row button handlers
--------------------------------------------------- */
+function openRosterEditor(teamId) {
+  const team = listTeams().find(t => String(t.id) === String(teamId));
+  if (!team) return;
 
-function attachRowHandlers() {
-  const tbody = document.getElementById('teams-table-body');
-  if (!tbody) return;
+  const allBowlers = listBowlers().slice().sort((a, b) => {
+    const na = (a.name || '').toLowerCase();
+    const nb = (b.name || '').toLowerCase();
+    return na.localeCompare(nb);
+  });
 
-  tbody.querySelectorAll('tr').forEach(tr => {
-    const teamId = Number(tr.dataset.teamId);
-    if (!teamId) return;
-    const team = listTeams().find(t => Number(t.id) === teamId);
-    if (!team) return;
+  const rosterSelect = document.getElementById('roster-bowlers');
+  const rosterTitle = document.getElementById('roster-title');
+  const rosterTeamName = document.getElementById('roster-team-name');
+  const editorSection = document.getElementById('roster-editor');
 
-    const editBtn = tr.querySelector('.btn-edit');
-    const rosterBtn = tr.querySelector('.btn-roster');
-    const deleteBtn = tr.querySelector('.btn-delete');
+  rosterSelect.innerHTML = '';
+  rosterTitle.textContent = 'Edit Roster';
+  rosterTeamName.textContent = `${team.name} (${team.league || 'No League'})`;
 
-    if (editBtn) {
-      editBtn.addEventListener('click', (e) => {
-        e.stopPropagation();
-        openFormForTeam(team);
-      });
+  const currentIds = new Set(team.bowlerIds || []);
+
+  allBowlers.forEach(b => {
+    const opt = document.createElement('option');
+    opt.value = b.id;
+    const name = b.name || `${b.firstName || ''} ${b.lastName || ''}`.trim();
+    opt.textContent = name;
+    if (currentIds.has(b.id)) {
+      opt.selected = true;
     }
+    rosterSelect.appendChild(opt);
+  });
 
-    if (rosterBtn) {
-      rosterBtn.addEventListener('click', (e) => {
-        e.stopPropagation();
-        openRosterEditor(team);
-      });
-    }
+  editorSection.dataset.teamId = team.id;
+  editorSection.style.display = 'block';
+}
 
-    if (deleteBtn) {
-      deleteBtn.addEventListener('click', (e) => {
-        e.stopPropagation();
-        if (confirm(`Delete team "${team.name}"?`)) {
-          deleteTeam(team.id);
-          renderTeams();
-          closeRosterEditor();
-          resetTeamForm();
-        }
-      });
-    }
+function attachTeamRowHandlers() {
+  document.querySelectorAll('.btn-team-edit').forEach(btn => {
+    btn.onclick = () => {
+      const row = btn.closest('tr');
+      const id = row.dataset.id;
+      const team = listTeams().find(t => String(t.id) === String(id));
+      if (!team) return;
+
+      document.getElementById('team-id').value = team.id;
+      document.getElementById('team-name').value = team.name || '';
+      const leagueSelect = document.getElementById('team-league');
+      leagueSelect.innerHTML = buildLeagueOptions(team.league || '');
+
+      document.getElementById('team-form-title').textContent = 'Edit Team';
+      document.getElementById('btn-team-save').textContent = 'Update Team';
+      document.getElementById('btn-team-cancel').style.display = 'inline-block';
+    };
+  });
+
+  document.querySelectorAll('.btn-team-roster').forEach(btn => {
+    btn.onclick = () => {
+      const row = btn.closest('tr');
+      const id = row.dataset.id;
+      openRosterEditor(id);
+    };
+  });
+
+  document.querySelectorAll('.btn-team-delete').forEach(btn => {
+    btn.onclick = () => {
+      const row = btn.closest('tr');
+      const id = row.dataset.id;
+      if (!confirm('Delete this team?')) return;
+      deleteTeam(id);
+      renderTeamsTable();
+      document.getElementById('roster-editor').style.display = 'none';
+    };
   });
 }
 
-/* ------------------------------------------------
-   Form submit handlers
--------------------------------------------------- */
+/* ---------- init ---------- */
 
-function onTeamSubmit(e) {
-  e.preventDefault();
+document.addEventListener('DOMContentLoaded', async () => {
+  // Import CSV data first (leagues, bowlers, teams, rosters)
+  await seedFromCSVsIfNeeded();
 
-  const idStr = document.getElementById('team-id').value.trim();
-  const name = document.getElementById('team-name').value.trim();
-  const league = document.getElementById('team-league').value.trim();
-
-  if (!name) {
-    alert('Team name is required');
-    return;
+  // Set up league dropdown in team form
+  const leagueSelect = document.getElementById('team-league');
+  if (leagueSelect) {
+    leagueSelect.innerHTML = buildLeagueOptions('');
   }
 
-  if (idStr) {
-    const id = Number(idStr);
-    updateTeam(id, { name, league });
-  } else {
-    createTeam({ name, league });
-  }
-
-  resetTeamForm();
-  renderTeams();
-}
-
-function onRosterSave() {
-  if (!currentRosterTeamId) return;
-  const sel = document.getElementById('roster-bowlers');
-  if (!sel) return;
-
-  const ids = Array.from(sel.selectedOptions || []).map(opt => Number(opt.value));
-  setTeamRoster(currentRosterTeamId, ids);
-  renderTeams();
-  closeRosterEditor();
-}
-
-/* ------------------------------------------------
-   Init
--------------------------------------------------- */
-
-async function initTeamsPage() {
-  await seedTeamsFromCsvIfEmpty();
-
-  populateLeagueSelect();
-  populateRosterBowlers();
-  renderTeams();
+  renderTeamsTable();
 
   const form = document.getElementById('team-form');
-  if (form) form.addEventListener('submit', onTeamSubmit);
-
   const cancelBtn = document.getElementById('btn-team-cancel');
-  if (cancelBtn) cancelBtn.addEventListener('click', resetTeamForm);
 
+  form.addEventListener('submit', (e) => {
+    e.preventDefault();
+
+    const idVal = document.getElementById('team-id').value;
+    const name = document.getElementById('team-name').value.trim();
+    const league = document.getElementById('team-league').value;
+
+    if (!name) {
+      alert('Team name is required');
+      return;
+    }
+
+    const payload = { name, league };
+
+    if (idVal) {
+      updateTeam(idVal, payload);
+    } else {
+      createTeam(payload);
+    }
+
+    form.reset();
+    document.getElementById('team-id').value = '';
+    document.getElementById('team-form-title').textContent = 'Add Team';
+    document.getElementById('btn-team-save').textContent = 'Save Team';
+    cancelBtn.style.display = 'none';
+
+    renderTeamsTable();
+  });
+
+  cancelBtn.addEventListener('click', () => {
+    form.reset();
+    document.getElementById('team-id').value = '';
+    document.getElementById('team-form-title').textContent = 'Add Team';
+    document.getElementById('btn-team-save').textContent = 'Save Team';
+    cancelBtn.style.display = 'none';
+  });
+
+  // Roster editor buttons
   const rosterSave = document.getElementById('btn-roster-save');
-  if (rosterSave) rosterSave.addEventListener('click', onRosterSave);
-
   const rosterCancel = document.getElementById('btn-roster-cancel');
-  if (rosterCancel) rosterCancel.addEventListener('click', closeRosterEditor);
-}
+  const rosterEditor = document.getElementById('roster-editor');
 
-document.addEventListener('DOMContentLoaded', () => {
-  initTeamsPage();
+  rosterSave.addEventListener('click', () => {
+    const teamId = rosterEditor.dataset.teamId;
+    if (!teamId) return;
+
+    const sel = document.getElementById('roster-bowlers');
+    const selectedIds = Array.from(sel.selectedOptions).map(o => Number(o.value));
+
+    setTeamRoster(teamId, selectedIds);
+    renderTeamsTable();
+    rosterEditor.style.display = 'none';
+  });
+
+  rosterCancel.addEventListener('click', () => {
+    rosterEditor.style.display = 'none';
+  });
 });
