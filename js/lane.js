@@ -1,6 +1,7 @@
 // js/lane.js
+// js/lane.js
 import {
-  initStateFromCsv,
+  seedFromCSVsIfNeeded,
   getLane,
   getState,
   saveState,
