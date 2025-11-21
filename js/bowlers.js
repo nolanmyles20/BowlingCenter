@@ -3,178 +3,212 @@ import {
   listBowlers,
   createBowler,
   updateBowler,
-  deleteBowler
-} from './state.js';
+  deleteBowler,
+  getState
+} from "./state.js";
 
-// ---- CSV config ----
-const LEAGUES_CSV_URL = 'data/leagues.csv';   // columns: name,hcpBase (at minimum)
-const BOWLERS_CSV_URL = 'data/bowlers.csv';   // columns: name,gender,handicap,league
+const BOWLERS_CSV_URL = "data/bowlers.csv"; // full CSV with all fields
 
-let LEAGUES = []; // populated from leagues.csv
-
-// ---- CSV helpers ----
-
+/* ============================================
+   CSV PARSER
+============================================ */
 function parseCsv(text) {
-  const lines = text.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+  const lines = text.trim().split(/\r?\n/);
   if (!lines.length) return [];
-  const headers = lines[0].split(',').map(h => h.trim());
+
+  const header = lines[0].split(",").map(h => h.trim());
   const rows = [];
 
   for (let i = 1; i < lines.length; i++) {
-    const cols = lines[i].split(',').map(c => c.trim());
-    if (!cols.length || cols[0] === '') continue;
+    const cols = lines[i].split(",");
     const obj = {};
-    headers.forEach((h, idx) => {
-      obj[h] = cols[idx] ?? '';
+    header.forEach((h, idx) => {
+      obj[h] = (cols[idx] || "").trim();
     });
     rows.push(obj);
   }
-
   return rows;
 }
 
-async function loadLeaguesFromCsv() {
+/* ============================================
+   INITIAL CSV SEED
+============================================ */
+async function seedBowlersFromCsvIfEmpty() {
+  const existing = listBowlers();
+  if (existing.length > 0) return;
+
   try {
-    const res = await fetch(LEAGUES_CSV_URL);
-    if (!res.ok) return;
-    const text = await res.text();
+    const resp = await fetch(BOWLERS_CSV_URL);
+    if (!resp.ok) return;
+
+    const text = await resp.text();
     const rows = parseCsv(text);
-    LEAGUES = rows.map(r => r.name).filter(Boolean);
-  } catch (err) {
-    console.warn('Failed to load leagues.csv, falling back to none:', err);
-    LEAGUES = [];
+
+    rows.forEach((r, index) => {
+      const name = `${r.first_name || ""} ${r.last_name || ""}`.trim();
+
+      createBowler({
+        id: index + 1,
+        name,
+        gender: r.gender || "",
+        handicap: Number(r.HCP || 0),
+        league: r.Team || "",
+        // all extra fields stored:
+        teamNumber: r.Team# || "",
+        posNumber: r.Pos# || "",
+        pins: r.Pins || "",
+        games: r.Games || "",
+        avg: r.Avg || "",
+        enteringAvg: r.EnteringAvg || "",
+        hhg: r.HHG || "",
+        hhs: r.HHS || "",
+        hsg: r.HSG || "",
+        hss: r.HSS || "",
+        mib: r.MIB || ""
+      });
+    });
+  } catch (e) {
+    console.warn("Could not load bowlers CSV:", e);
   }
 }
 
-async function loadInitialBowlersFromCsv() {
-  try {
-    const res = await fetch(BOWLERS_CSV_URL);
-    if (!res.ok) return;
-    const text = await res.text();
-    const rows = parseCsv(text);
+/* ============================================
+   Render League Dropdown
+============================================ */
+function populateLeagueSelect(selected = "") {
+  const state = getState();
+  const leagues = Object.keys(state.leagues || {});
+  const LEAGUES_DEFAULT = ["Open Bowling", "Tuesday Mixed", "Men's League", "Women's League", "Youth League"];
 
-    const existing = listBowlers();
-    for (const row of rows) {
-      const name = (row.name || '').trim();
-      if (!name) continue;
+  const all = Array.from(new Set([...LEAGUES_DEFAULT, ...leagues]));
 
-      const league = (row.league || '').trim();
-      const gender = (row.gender || '').trim();
-      const handicap = parseInt(row.handicap || '0', 10) || 0;
+  const sel = document.getElementById("bowler-league");
+  sel.innerHTML = `<option value="">-- None --</option>`;
 
-      const already = existing.find(
-        b =>
-          b.name.trim().toLowerCase() === name.toLowerCase() &&
-          (b.league || '').trim().toLowerCase() === league.toLowerCase()
-      );
-      if (!already) {
-        createBowler({ name, gender, handicap, league });
-      }
-    }
-  } catch (err) {
-    console.warn('Failed to load bowlers.csv:', err);
-  }
+  all.forEach(lg => {
+    const opt = document.createElement("option");
+    opt.value = lg;
+    opt.textContent = lg;
+    if (lg === selected) opt.selected = true;
+    sel.appendChild(opt);
+  });
 }
 
-// ---- UI helpers ----
-
-function populateLeagueSelect() {
-  const select = document.getElementById('bowler-league');
-  const options =
-    '<option value="">-- None --</option>' +
-    LEAGUES.map(l => `<option value="${l}">${l}</option>`).join('');
-  select.innerHTML = options;
-}
-
+/* ============================================
+   Render Table of All Bowlers
+============================================ */
 function renderTable() {
-  const tbody = document.getElementById('bowler-table-body');
-  tbody.innerHTML = '';
+  const tbody = document.getElementById("bowler-table-body");
+  tbody.innerHTML = "";
+
   const bowlers = listBowlers();
 
   bowlers.forEach(b => {
-    const tr = document.createElement('tr');
+    const tr = document.createElement("tr");
     tr.dataset.id = b.id;
+
     tr.innerHTML = `
       <td>${b.name}</td>
-      <td>${b.gender || ''}</td>
-      <td>${b.handicap ?? 0}</td>
-      <td>${b.league || ''}</td>
+      <td>${b.gender || ""}</td>
+      <td>${b.handicap || 0}</td>
+      <td>${b.league || ""}</td>
+
+      <td>${b.teamNumber || ""}</td>
+      <td>${b.posNumber || ""}</td>
+      <td>${b.pins || ""}</td>
+      <td>${b.games || ""}</td>
+      <td>${b.avg || ""}</td>
+      <td>${b.enteringAvg || ""}</td>
+      <td>${b.hhg || ""}</td>
+      <td>${b.hhs || ""}</td>
+      <td>${b.hsg || ""}</td>
+      <td>${b.hss || ""}</td>
+      <td>${b.mib || ""}</td>
+
       <td>
         <button class="btn-small btn-edit">Edit</button>
-        <button class="btn-small btn-delete">Delete</button>
+        <button class="btn-small btn-secondary btn-delete">Delete</button>
       </td>
     `;
+
     tbody.appendChild(tr);
   });
 
   attachRowHandlers();
 }
 
+/* ============================================
+   Row Button Handlers
+============================================ */
 function attachRowHandlers() {
-  document.querySelectorAll('.btn-edit').forEach(btn => {
-    btn.onclick = () => {
-      const row = btn.closest('tr');
-      const id = row.dataset.id;
-      loadBowlerIntoForm(row, id);
-    };
-  });
+  const tbody = document.getElementById("bowler-table-body");
 
-  document.querySelectorAll('.btn-delete').forEach(btn => {
-    btn.onclick = () => {
-      const row = btn.closest('tr');
-      const id = row.dataset.id;
-      if (confirm('Delete this bowler?')) {
+  tbody.querySelectorAll("tr").forEach(tr => {
+    const id = Number(tr.dataset.id);
+    const bowler = listBowlers().find(b => b.id === id);
+
+    const editBtn = tr.querySelector(".btn-edit");
+    const deleteBtn = tr.querySelector(".btn-delete");
+
+    editBtn.onclick = (e) => {
+      e.stopPropagation();
+      openFormForEdit(bowler);
+    };
+
+    deleteBtn.onclick = (e) => {
+      e.stopPropagation();
+      if (confirm(`Delete ${bowler.name}?`)) {
         deleteBowler(id);
         renderTable();
+        resetForm();
       }
     };
   });
 }
 
-function loadBowlerIntoForm(row, id) {
-  const cells = row.children;
-  document.getElementById('bowler-id').value = id;
-  document.getElementById('bowler-name').value = cells[0].textContent;
-  document.getElementById('bowler-gender').value = cells[1].textContent || '';
-  document.getElementById('bowler-handicap').value = cells[2].textContent || 0;
-  document.getElementById('bowler-league').value = cells[3].textContent || '';
-
-  document.getElementById('bowler-form-title').textContent = 'Edit Bowler';
-  document.getElementById('btn-save-bowler').textContent = 'Update Bowler';
-  document.getElementById('btn-cancel-edit').style.display = 'inline-block';
-}
-
+/* ============================================
+   Form Handling
+============================================ */
 function resetForm() {
-  document.getElementById('bowler-id').value = '';
-  document.getElementById('bowler-name').value = '';
-  document.getElementById('bowler-gender').value = '';
-  document.getElementById('bowler-handicap').value = 0;
-  document.getElementById('bowler-league').value = '';
+  document.getElementById("bowler-id").value = "";
+  document.getElementById("bowler-name").value = "";
+  document.getElementById("bowler-gender").value = "";
+  document.getElementById("bowler-handicap").value = 0;
 
-  document.getElementById('bowler-form-title').textContent = 'Add Bowler';
-  document.getElementById('btn-save-bowler').textContent = 'Save Bowler';
-  document.getElementById('btn-cancel-edit').style.display = 'none';
+  populateLeagueSelect("");
+
+  document.getElementById("bowler-form-title").textContent = "Add Bowler";
+  document.getElementById("btn-cancel-edit").style.display = "none";
 }
 
-function onSubmit(event) {
-  event.preventDefault();
+function openFormForEdit(b) {
+  document.getElementById("bowler-id").value = b.id;
+  document.getElementById("bowler-name").value = b.name;
+  document.getElementById("bowler-gender").value = b.gender || "";
+  document.getElementById("bowler-handicap").value = b.handicap || 0;
 
-  const id = document.getElementById('bowler-id').value;
-  const name = document.getElementById('bowler-name').value.trim();
-  const gender = document.getElementById('bowler-gender').value;
-  const handicap = parseInt(
-    document.getElementById('bowler-handicap').value || '0',
-    10
-  );
-  const league = document.getElementById('bowler-league').value;
+  populateLeagueSelect(b.league || "");
+
+  document.getElementById("bowler-form-title").textContent = "Edit Bowler";
+  document.getElementById("btn-cancel-edit").style.display = "inline-block";
+}
+
+function onSave(e) {
+  e.preventDefault();
+
+  const id = document.getElementById("bowler-id").value;
+  const name = document.getElementById("bowler-name").value.trim();
+  const gender = document.getElementById("bowler-gender").value;
+  const handicap = Number(document.getElementById("bowler-handicap").value);
+  const league = document.getElementById("bowler-league").value;
 
   if (!name) {
-    alert('Name is required');
+    alert("Name is required.");
     return;
   }
 
   if (id) {
-    updateBowler(id, { name, gender, handicap, league });
+    updateBowler(Number(id), { name, gender, handicap, league });
   } else {
     createBowler({ name, gender, handicap, league });
   }
@@ -183,21 +217,15 @@ function onSubmit(event) {
   renderTable();
 }
 
-// ---- init ----
+/* ============================================
+   Init
+============================================ */
+document.addEventListener("DOMContentLoaded", async () => {
+  await seedBowlersFromCsvIfEmpty();
 
-document.addEventListener('DOMContentLoaded', () => {
-  (async () => {
-    await loadLeaguesFromCsv();
-    await loadInitialBowlersFromCsv();
+  populateLeagueSelect();
+  renderTable();
 
-    populateLeagueSelect();
-    renderTable();
-
-    document
-      .getElementById('bowler-form')
-      .addEventListener('submit', onSubmit);
-    document
-      .getElementById('btn-cancel-edit')
-      .addEventListener('click', resetForm);
-  })();
+  document.getElementById("bowler-form").addEventListener("submit", onSave);
+  document.getElementById("btn-cancel-edit").addEventListener("click", resetForm);
 });
