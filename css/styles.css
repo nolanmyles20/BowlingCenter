@@ -562,3 +562,22 @@ main {
     font-size: 1rem;
   }
 }
+.bowling-popup {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.75); /* dim the background */
+  z-index: 9999;
+}
+
+.bowling-popup.hidden {
+  display: none;
+}
+
+.bowling-popup img {
+  max-width: 90vw;
+  max-height: 90vh;
+  object-fit: contain;
+}
