@@ -488,3 +488,47 @@ main {
   text-transform: uppercase;
   letter-spacing: 0.06em;
 }
+/* =========================
+   Game / Series complete modal
+   ========================= */
+
+#game-complete-overlay .modal-window {
+  width: 75vw;
+  height: 75vh;
+  max-width: 1200px;
+  max-height: 800px;
+  display: flex;
+  flex-direction: column;
+}
+
+#game-complete-overlay .modal-header {
+  flex: 0 0 auto;
+}
+
+#game-complete-overlay .modal-body {
+  flex: 1 1 auto;
+  overflow: auto;
+}
+
+#game-complete-title {
+  font-size: 1.5rem;
+}
+
+/* Big table with full grid for popup */
+.game-complete-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: min(1.35rem, 2.1vw); /* grow but not crazy */
+}
+
+.game-complete-table th,
+.game-complete-table td {
+  border: 1px solid #1f2937;
+  padding: 0.45rem 0.6rem;
+  text-align: center;
+}
+
+.game-complete-table thead th {
+  background: #0f172a;
+  font-weight: 700;
+}
