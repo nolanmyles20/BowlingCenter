@@ -13,6 +13,8 @@ body {
   color: #e5e7eb;
 }
 
+/* TOP BAR */
+
 .top-bar {
   background: #020617;
   border-bottom: 2px solid #0f172a;
@@ -128,7 +130,7 @@ main {
   filter: brightness(1.2);
 }
 
-/* TABLES */
+/* TABLES (front desk pages) */
 
 .lanes-table,
 .bowler-table {
@@ -151,7 +153,9 @@ main {
   background: #0f172a;
 }
 
-/* LANE SCREEN LAYOUT */
+/* ======================
+   LANE SCREEN LAYOUT
+   ====================== */
 
 .lane-body {
   background: radial-gradient(circle at top, #0f172a 0, #020617 55%);
@@ -203,7 +207,7 @@ main {
   margin-right: 0.25rem;
 }
 
-/* let the scoring panel grow to fill height */
+/* scoring panel grows to fill height */
 .lane-controls-panel {
   width: 100%;
   flex: 1 1 auto;
@@ -226,7 +230,9 @@ main {
   display: none;
 }
 
-/* SCOREBOARD BASE */
+/* ======================
+   SCOREBOARD
+   ====================== */
 
 .scoreboard {
   width: 100%;
@@ -243,10 +249,20 @@ main {
   display: flex;
 }
 
+/* header row is auto height, player rows stretch */
+.scoreboard-row.scoreboard-header {
+  flex: 0 0 auto;
+}
+
+.scoreboard-row.player-row {
+  flex: 1 1 0;
+}
+
 .scoreboard-cell {
   padding: 8px 10px;
   border-right: 1px solid #1f2937;
-  min-height: 68px;         /* taller cells so grid uses more height */
+  /* let flexbox control height; this is just a minimum */
+  min-height: 48px;
   display: flex;
   flex-direction: column;
   justify-content: center;
@@ -384,7 +400,30 @@ main {
   gap: 0.25rem;
 }
 
-/* MODALS */
+/* ABSENT styling */
+
+.player-name.absent {
+  text-decoration: line-through;
+  color: #9ca3af;
+}
+
+/* banner above grid when waiting to start next game */
+
+.next-game-banner {
+  margin-bottom: 0.4rem;
+  padding: 0.35rem 0.6rem;
+  background: #1f2937;
+  border-radius: 4px;
+  text-align: center;
+  font-size: 0.95rem;
+  color: #facc15;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+/* ======================
+   MODALS – BASE
+   ====================== */
 
 .hidden {
   display: none !important;
@@ -445,7 +484,52 @@ main {
   justify-content: flex-end;
 }
 
-/* RESPONSIVE */
+/* =========================
+   Game / Series complete modal
+   ========================= */
+
+#game-complete-overlay .modal-window {
+  width: 75vw;
+  height: 75vh;
+  max-width: 1200px;
+  max-height: 800px;
+  display: flex;
+  flex-direction: column;
+}
+
+#game-complete-title {
+  font-size: 2rem;
+  font-weight: 700;
+  margin: 0 0 0.5rem;
+}
+
+#game-complete-summary {
+  flex: 1 1 auto;
+  overflow: auto;
+}
+
+/* big grid table used by lane.js (class="recap-table") */
+#game-complete-summary .recap-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: min(1.35rem, 2.1vw); /* grow but not crazy */
+}
+
+#game-complete-summary .recap-table th,
+#game-complete-summary .recap-table td {
+  border: 1px solid #1f2937;
+  padding: 0.45rem 0.6rem;
+  text-align: center;
+}
+
+#game-complete-summary .recap-table thead th {
+  background: #0f172a;
+  font-weight: 700;
+}
+
+/* ======================
+   RESPONSIVE
+   ====================== */
 
 @media (max-width: 800px) {
   .lane-main {
@@ -466,69 +550,15 @@ main {
   .scoreboard .player-frame-cell {
     font-size: 0.95rem;
   }
-}
 
-/* absent styling */
+  #game-complete-overlay .modal-window {
+    width: 95vw;
+    height: 80vh;
+    max-width: 95vw;
+    max-height: 80vh;
+  }
 
-.player-name.absent {
-  text-decoration: line-through;
-  color: #9ca3af;
-}
-
-/* banner above grid when waiting to start next game */
-
-.next-game-banner {
-  margin-bottom: 0.4rem;
-  padding: 0.35rem 0.6rem;
-  background: #1f2937;
-  border-radius: 4px;
-  text-align: center;
-  font-size: 0.95rem;
-  color: #facc15;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-}
-/* =========================
-   Game / Series complete modal
-   ========================= */
-
-#game-complete-overlay .modal-window {
-  width: 75vw;
-  height: 75vh;
-  max-width: 1200px;
-  max-height: 800px;
-  display: flex;
-  flex-direction: column;
-}
-
-#game-complete-overlay .modal-header {
-  flex: 0 0 auto;
-}
-
-#game-complete-overlay .modal-body {
-  flex: 1 1 auto;
-  overflow: auto;
-}
-
-#game-complete-title {
-  font-size: 1.5rem;
-}
-
-/* Big table with full grid for popup */
-.game-complete-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: min(1.35rem, 2.1vw); /* grow but not crazy */
-}
-
-.game-complete-table th,
-.game-complete-table td {
-  border: 1px solid #1f2937;
-  padding: 0.45rem 0.6rem;
-  text-align: center;
-}
-
-.game-complete-table thead th {
-  background: #0f172a;
-  font-weight: 700;
+  #game-complete-summary .recap-table {
+    font-size: 1rem;
+  }
 }
