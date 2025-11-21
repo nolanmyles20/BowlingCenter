@@ -1,6 +1,6 @@
 // js/state.js
 
-const STORAGE_KEY = 'bowling_state_v3';
+const STORAGE_KEY = 'bowling_state_v6';
 
 // ---------- helpers ----------
 
