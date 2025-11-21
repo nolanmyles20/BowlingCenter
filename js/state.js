@@ -348,9 +348,11 @@ export function setTeamRoster(teamId, bowlerIds) {
 export function initStateFromCsv(bowlersRows = [], teamsRows = [], leaguesRows = []) {
   // If we already have data, do not override user’s saved localStorage.
   const hasAnyData =
-    Object.keys(state.bowlers).length ||
-    Object.keys(state.teams).length ||
-    Object.keys(state.leagues).length;
+    state.leagues = {};
+    state.bowlers = {};
+    state.teams = {};
+    state.nextBowlerId = 1;
+    state.nextTeamId = 1;
 
   if (hasAnyData) {
     return;
