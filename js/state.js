@@ -36,6 +36,8 @@ for (let i = 1; i <= 12; i++) {
 
 // ---------- load/save ----------
 
+// ---------- load/save ----------
+
 function loadState() {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
@@ -44,7 +46,7 @@ function loadState() {
     if (raw) {
       const parsed = JSON.parse(raw);
 
-      // Only restore lane-related data (status, selections, scores).
+      // Only restore lane-related data (status, selections, scoring).
       if (parsed.lanes) {
         Object.keys(parsed.lanes).forEach(k => {
           state.lanes[k] = { ...state.lanes[k], ...parsed.lanes[k] };
@@ -62,7 +64,6 @@ function loadState() {
   }
 }
 
-
 let state = loadState();
 
 export function getState() {
@@ -76,6 +77,7 @@ export function saveState() {
   };
   localStorage.setItem(STORAGE_KEY, JSON.stringify(toPersist));
 }
+
 
 
 // ---------- lane + players ----------
