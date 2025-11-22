@@ -103,8 +103,8 @@ async function loadDataFromCSVs() {
 
   // ---- Teams ----
   teams = teamRows.map(row => {
-    const teamId = (row.team_id || '').trim();       // "32170-01"
-    const leagueId = (row.league_id || '').trim();   // "32170"
+    const teamId = (row.team_id || '').trim();         // "32170-01"
+    const leagueId = (row.league_id || '').trim();     // "32170"
     const teamNumber = (row.team_number || '').trim(); // "1", "2", ...
     const teamName = (row.team_name || '').trim();
 
@@ -129,7 +129,7 @@ async function loadDataFromCSVs() {
 
 /* ---------- UI helpers ---------- */
 
-// NEW: league filter dropdown
+// league filter dropdown for Teams & Rosters table
 function buildLeagueFilterOptions() {
   const select = document.getElementById('league-filter');
   if (!select) return;
@@ -147,6 +147,7 @@ function buildLeagueFilterOptions() {
   select.innerHTML = html;
 }
 
+// league options for the Add/Edit Team form
 function buildLeagueOptions(selected) {
   let html = '<option value="">-- None --</option>';
   leagueNames.forEach(name => {
@@ -164,7 +165,7 @@ function renderTeamsTable(filterLeague = '') {
 
   let filtered = teams;
 
-  // APPLY FILTER
+  // APPLY LEAGUE FILTER
   if (filterLeague) {
     filtered = teams.filter(t => t.leagueName === filterLeague);
   }
@@ -218,10 +219,16 @@ function openRosterEditor(teamId) {
   const rosterTitle = document.getElementById('roster-title');
   const rosterTeamName = document.getElementById('roster-team-name');
   const editorSection = document.getElementById('roster-editor');
+  const rosterSearch = document.getElementById('roster-search');
 
   rosterSelect.innerHTML = '';
   rosterTitle.textContent = 'Edit Roster';
   rosterTeamName.textContent = `${team.name} (${team.leagueName || 'No League'})`;
+
+  // Clear previous search when opening editor for a new team
+  if (rosterSearch) {
+    rosterSearch.value = '';
+  }
 
   const currentIds = new Set(team.bowlerIds || []);
 
@@ -401,4 +408,19 @@ document.addEventListener('DOMContentLoaded', async () => {
   rosterCancel.addEventListener('click', () => {
     rosterEditor.style.display = 'none';
   });
+
+  // NEW: Roster editor search for bowlers
+  const rosterSearch = document.getElementById('roster-search');
+  if (rosterSearch) {
+    rosterSearch.addEventListener('input', () => {
+      const q = rosterSearch.value.toLowerCase();
+      const sel = document.getElementById('roster-bowlers');
+      if (!sel) return;
+
+      Array.from(sel.options).forEach(opt => {
+        const text = opt.textContent.toLowerCase();
+        opt.style.display = text.includes(q) ? '' : 'none';
+      });
+    });
+  }
 });
