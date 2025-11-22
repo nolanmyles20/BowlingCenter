@@ -805,11 +805,11 @@ function renderScore(laneId) {
     totalCell.innerHTML = `
       <div class="frame-score">${totalWithHcp}</div>
       <div class="rolls-row">
-        <span class="roll roll1">Scr ${scratchTotal}</span>
-        <span class="roll roll2">Hcp ${hcp}</span>
+        <span class="roll scratch-only">${scratchTotal}</span>
       </div>
     `;
     row.appendChild(totalCell);
+
 
     scoreboard.appendChild(row);
   });
@@ -876,11 +876,11 @@ function renderScore(laneId) {
   teamTotalCell.innerHTML = `
     <div class="frame-score">${teamTotalWithHcp}</div>
     <div class="rolls-row">
-      <span class="roll roll1">Scr ${teamScratchTotal}</span>
-      <span class="roll roll2">Hcp ${teamHcpTotal}</span>
+      <span class="roll scratch-only">${teamScratchTotal}</span>
     </div>
   `;
   teamRow.appendChild(teamTotalCell);
+
 
   scoreboard.appendChild(teamRow);
 
