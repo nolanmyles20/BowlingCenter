@@ -9,7 +9,6 @@ let bowlers = [];      // [{ id, firstName, lastName, gender, handicap, name }]
 let teams = [];        // [{ id, teamId, name, leagueId, leagueName, teamNumber, bowlerIds: [bowlerId,...] }]
 let leagueNames = [];  // ["2025-26 Wednesday Mixed League", ...]
 
-
 /* ---------- CSV helpers ---------- */
 
 async function fetchCSV(path) {
@@ -43,7 +42,6 @@ function parseCSV(text) {
 
   return rows;
 }
-
 
 /* ---------- data loading from CSV ---------- */
 
@@ -129,8 +127,25 @@ async function loadDataFromCSVs() {
   window.__bowlersById = bowlersById;
 }
 
-
 /* ---------- UI helpers ---------- */
+
+// NEW: league filter dropdown
+function buildLeagueFilterOptions() {
+  const select = document.getElementById('league-filter');
+  if (!select) return;
+
+  // Extract unique league names actually used by teams
+  const usedLeagueNames = Array.from(
+    new Set(teams.map(t => t.leagueName).filter(Boolean))
+  ).sort((a, b) => a.localeCompare(b));
+
+  let html = `<option value="">All Leagues</option>`;
+  usedLeagueNames.forEach(name => {
+    html += `<option value="${name}">${name}</option>`;
+  });
+
+  select.innerHTML = html;
+}
 
 function buildLeagueOptions(selected) {
   let html = '<option value="">-- None --</option>';
@@ -141,13 +156,20 @@ function buildLeagueOptions(selected) {
   return html;
 }
 
-function renderTeamsTable() {
+function renderTeamsTable(filterLeague = '') {
   const tbody = document.getElementById('teams-table-body');
   if (!tbody) return;
 
   const bowlersById = window.__bowlersById || {};
 
-  const sortedTeams = teams.slice().sort((a, b) => {
+  let filtered = teams;
+
+  // APPLY FILTER
+  if (filterLeague) {
+    filtered = teams.filter(t => t.leagueName === filterLeague);
+  }
+
+  const sortedTeams = filtered.slice().sort((a, b) => {
     const na = (a.name || '').toLowerCase();
     const nb = (b.name || '').toLowerCase();
     return na.localeCompare(nb);
@@ -207,16 +229,13 @@ function openRosterEditor(teamId) {
     const opt = document.createElement('option');
     opt.value = b.id;
     opt.textContent = b.name || `${b.firstName || ''} ${b.lastName || ''}`.trim();
-    if (currentIds.has(b.id)) {
-      opt.selected = true;
-    }
+    if (currentIds.has(b.id)) opt.selected = true;
     rosterSelect.appendChild(opt);
   });
 
   editorSection.dataset.teamId = team.id;
   editorSection.style.display = 'block';
 }
-
 
 /* ---------- in-memory CRUD (no persistence) ---------- */
 
@@ -254,7 +273,6 @@ function setTeamRosterInMemory(teamId, bowlerIds) {
   team.bowlerIds = bowlerIds.slice();
 }
 
-
 /* ---------- row button handlers ---------- */
 
 function attachTeamRowHandlers() {
@@ -290,12 +308,11 @@ function attachTeamRowHandlers() {
       const id = row.dataset.id;
       if (!confirm('Delete this team?')) return;
       deleteTeamInMemory(id);
-      renderTeamsTable();
+      renderTeamsTable(document.getElementById('league-filter').value);
       document.getElementById('roster-editor').style.display = 'none';
     };
   });
 }
-
 
 /* ---------- init ---------- */
 
@@ -312,8 +329,21 @@ document.addEventListener('DOMContentLoaded', async () => {
     leagueSelect.innerHTML = buildLeagueOptions('');
   }
 
-  renderTeamsTable();
+  // Build league filter dropdown
+  buildLeagueFilterOptions();
 
+  // Render table the first time (no filter)
+  renderTeamsTable('');
+
+  // Hook up league filter
+  const leagueFilter = document.getElementById('league-filter');
+  if (leagueFilter) {
+    leagueFilter.addEventListener('change', e => {
+      renderTeamsTable(e.target.value);
+    });
+  }
+
+  // Form handlers
   const form = document.getElementById('team-form');
   const cancelBtn = document.getElementById('btn-team-cancel');
 
@@ -331,11 +361,8 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     const payload = { name, leagueName };
 
-    if (idVal) {
-      updateTeamInMemory(idVal, payload);
-    } else {
-      createTeamInMemory(payload);
-    }
+    if (idVal) updateTeamInMemory(idVal, payload);
+    else createTeamInMemory(payload);
 
     form.reset();
     document.getElementById('team-id').value = '';
@@ -343,7 +370,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.getElementById('btn-team-save').textContent = 'Save Team';
     cancelBtn.style.display = 'none';
 
-    renderTeamsTable();
+    renderTeamsTable(document.getElementById('league-filter').value);
   });
 
   cancelBtn.addEventListener('click', () => {
@@ -367,7 +394,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const selectedIds = Array.from(sel.selectedOptions).map(o => o.value);
 
     setTeamRosterInMemory(teamId, selectedIds);
-    renderTeamsTable();
+    renderTeamsTable(document.getElementById('league-filter').value);
     rosterEditor.style.display = 'none';
   });
 
