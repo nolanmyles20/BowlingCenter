@@ -602,3 +602,7 @@ main {
     0px 0px 24px white,
     0px 0px 36px black;
 }
+.main-nav a:link,
+.main-nav a:visited {
+  color: inherit !important;
+}
