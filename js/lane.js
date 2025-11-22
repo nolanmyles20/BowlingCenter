@@ -1,7 +1,5 @@
 // js/lane.js
-// js/lane.js
 import {
-  seedFromCSVsIfNeeded,
   getLane,
   getState,
   saveState,
@@ -68,6 +66,15 @@ function getViewMode(laneId) {
 function setViewMode(laneId, mode) {
   const key = VIEW_MODE_KEY_PREFIX + laneId;
   localStorage.setItem(key, mode);
+}
+
+// Treat "Active + no league + no team" as Open Bowling
+function isOpenBowlingLane(lane) {
+  if (!lane) return false;
+  const league = (lane.league || '').trim();
+  const hasLeague = !!league && league.toLowerCase() !== 'open bowling';
+  const hasTeam = lane.teamId != null;
+  return lane.active && !hasLeague && !hasTeam;
 }
 
 /* ---------------------------------------------------------
@@ -809,7 +816,9 @@ function renderLaneInfo(laneId) {
   if (title) title.textContent = `Lane ${laneId}`;
   if (!info) return;
 
-  const leagueText = lane.league || 'None';
+  const leagueText = isOpenBowlingLane(lane)
+    ? 'Open Bowling'
+    : (lane.league || 'None');
   const modeText = lane.mode === '9pin' ? '9-Pin No-Tap' : 'Standard';
   const teamText =
     team ? `${team.name} (${team.league || 'No league'})` : 'None';
@@ -832,6 +841,90 @@ function renderLaneInfo(laneId) {
       <span class="lane-info-value">${teamText}</span>
     </div>
   `;
+}
+
+/* ---------------------------------------------------------
+   Open-bowling manual bowler management
+--------------------------------------------------------- */
+
+function refreshOpenBowlingControls(laneId) {
+  const lane = getLane(laneId);
+  const open = isOpenBowlingLane(lane);
+
+  const addBtn = document.getElementById('menu-add-bowler-btn');
+  const removeBtn = document.getElementById('menu-remove-bowler-btn');
+
+  if (addBtn) {
+    addBtn.disabled = !open;
+    addBtn.style.display = open ? 'inline-block' : 'none';
+  }
+  if (removeBtn) {
+    removeBtn.disabled = !open;
+    removeBtn.style.display = open ? 'inline-block' : 'none';
+  }
+}
+
+function addManualBowler(laneId) {
+  const lane = getLane(laneId);
+  if (!isOpenBowlingLane(lane)) {
+    alert('Manual bowlers are only for open bowling lanes.');
+    return;
+  }
+  const name = prompt('Enter bowler name:');
+  if (!name || !name.trim()) return;
+
+  const newPlayers = (lane.players || []).slice();
+  newPlayers.push({
+    bowlerId: null,
+    name: name.trim(),
+    handicap: 0,
+    absent: false,
+    games: [
+      { rolls: [] },
+      { rolls: [] },
+      { rolls: [] }
+    ]
+  });
+
+  updateLane(laneId, {
+    players: newPlayers,
+    currentPlayerIndex: newPlayers.length - 1
+  });
+
+  renderScore(laneId);
+  renderPinButtons(getLane(laneId));
+}
+
+function removeManualBowler(laneId) {
+  const lane = getLane(laneId);
+  if (!isOpenBowlingLane(lane)) {
+    alert('Manual bowlers are only for open bowling lanes.');
+    return;
+  }
+
+  const players = lane.players || [];
+  if (!players.length) {
+    alert('No bowlers to remove.');
+    return;
+  }
+
+  const idx = lane.currentPlayerIndex || 0;
+  const removed = players[idx];
+  if (!confirm(`Remove ${removed.name || 'this bowler'} from lane?`)) return;
+
+  const newPlayers = players.slice();
+  newPlayers.splice(idx, 1);
+
+  let newIndex = idx;
+  if (newIndex >= newPlayers.length) newIndex = Math.max(0, newPlayers.length - 1);
+
+  updateLane(laneId, {
+    players: newPlayers,
+    currentPlayerIndex: newIndex
+  });
+
+  renderScore(laneId);
+  renderPinButtons(getLane(laneId));
 }
 
 /* ---------------------------------------------------------
@@ -973,13 +1066,8 @@ function setGame(laneId, gameNum) {
    Init
 --------------------------------------------------------- */
 
-document.addEventListener('DOMContentLoaded', async () => {
-   // Make sure CSV data is loaded into state before we touch lanes/teams/bowlers
-  await seedFromCSVsIfNeeded();
+document.addEventListener('DOMContentLoaded', () => {
   applyTheme(loadTheme());
-
-  // Make sure CSV data is loaded into state before we touch lanes/teams/bowlers
-  await initStateFromCsv();
 
   const laneId = getLaneIdFromQuery();
   const lane = getLane(laneId);
@@ -992,6 +1080,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   renderScore(laneId);
   renderPinButtons(getLane(laneId));
   checkAndHandleGameComplete(laneId);
+  refreshOpenBowlingControls(laneId);
 
   const toggleBtn = document.getElementById('view-toggle');
   if (toggleBtn) {
@@ -1012,10 +1101,10 @@ document.addEventListener('DOMContentLoaded', async () => {
   if (menuClose) menuClose.addEventListener('click', closeMenu);
   if (menuCloseBottom) menuCloseBottom.addEventListener('click', closeMenu);
 
-  const overlay = document.getElementById('lane-menu-overlay');
-  if (overlay) {
-    overlay.addEventListener('click', (e) => {
-      if (e.target === overlay) closeMenu();
+  const menuOverlay = document.getElementById('lane-menu-overlay');
+  if (menuOverlay) {
+    menuOverlay.addEventListener('click', (e) => {
+      if (e.target === menuOverlay) closeMenu();
     });
   }
 
@@ -1032,6 +1121,16 @@ document.addEventListener('DOMContentLoaded', async () => {
   const correctBtn = document.getElementById('menu-correct-btn');
   if (correctBtn) {
     correctBtn.addEventListener('click', () => handleScoreCorrection(laneId));
+  }
+
+  const addBowlerBtn = document.getElementById('menu-add-bowler-btn');
+  if (addBowlerBtn) {
+    addBowlerBtn.addEventListener('click', () => addManualBowler(laneId));
+  }
+
+  const removeBowlerBtn = document.getElementById('menu-remove-bowler-btn');
+  if (removeBowlerBtn) {
+    removeBowlerBtn.addEventListener('click', () => removeManualBowler(laneId));
   }
 
   const settingsBtn = document.getElementById('menu-settings-btn');
@@ -1052,7 +1151,9 @@ document.addEventListener('DOMContentLoaded', async () => {
   if (settingsCloseBottom) settingsCloseBottom.addEventListener('click', closeSettingsModal);
 
   const settingsSave = document.getElementById('settings-save-btn');
-  if (settingsSave) settingsSave.addEventListener('click', saveSettingsFromForm);
+  if (settingsSave) {
+    settingsSave.addEventListener('click', saveSettingsFromForm);
+  }
 
   // Game complete modal
   const gcClose = document.getElementById('game-complete-close');
