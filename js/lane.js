@@ -1128,7 +1128,8 @@ function saveSettingsFromForm() {
     rowOdd: rowOdd?.value || DEFAULT_THEME.rowOdd,
     rowEven: rowEven?.value || DEFAULT_THEME.rowEven,
     border: border?.value || DEFAULT_THEME.border,
-    highlight: highlight?.value || DEFAULT_THEME.highlight
+    highlight: highlight?.value || DEFAULT_THEME.highlight,
+    scoreText: scoreText?.value || DEFAULT_THEME.scoreText
   };
 
   saveTheme(theme);
