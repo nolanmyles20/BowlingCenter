@@ -678,3 +678,10 @@ a:visited {
   font-weight: 400 !important;
   opacity: 0.9;
 }
+/* Active bowler name + handicap use same pulse as arrows */
+.scoreboard-row.player-row.current .player-name,
+.scoreboard-row.player-row.current .player-hcp,
+.scoreboard-row.player-row.current .player-sub {
+  color: var(--color-highlight, #f97316) !important;
+  animation: arrowPulse 0.8s infinite;  /* same as arrows */
+}
