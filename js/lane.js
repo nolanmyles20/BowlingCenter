@@ -950,18 +950,13 @@ function renderLaneInfo(laneId) {
   const modeText = lane.mode === '9pin' ? '9-Pin No-Tap' : 'Standard';
 
   let teamText = 'None';
+
   if (isOpenBowlingLane(lane)) {
     teamText = 'Open Bowling';
   } else if (lane.teamName) {
-    // preferred: name stored on the lane by the front desk
-    teamText = lane.teamName;
-  } else if (teamFromState && teamFromState.name) {
-    // fallback if state.teams is still populated
-    teamText = teamFromState.name;
-  } else if (lane.teamId) {
-    // last resort, show the ID at least
-    teamText = String(lane.teamId);
+    teamText = lane.teamName;      // ALWAYS use the name we saved from front desk
   }
+
 
   info.innerHTML = `
     <div class="lane-info-line">
