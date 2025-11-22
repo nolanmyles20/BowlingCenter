@@ -132,35 +132,63 @@ void loadPopupImagesConfig();
  * Low-level popup function. Shows a random image for the given type:
  * type = 'strike' | 'spare' | 'gutter'
  */
+let bowlingPopupTimeout = null;
+let bowlingPopupSequence = 0; // to ignore stale loads
+
 export function showBowlingPopup(type) {
   const pool = popupImagesConfig[type];
 
   if (!Array.isArray(pool) || pool.length === 0) {
-    return; // nothing configured for this type
+    console.warn('No popup images configured for type:', type);
+    return;
+  }
+
+  const popup = document.getElementById('bowling-popup');
+  const img = document.getElementById('bowling-popup-img');
+  if (!popup || !img) {
+    console.warn('Popup elements not found in DOM');
+    return;
   }
 
   const randomIndex = Math.floor(Math.random() * pool.length);
   const imgSrc = pool[randomIndex];
 
-  const popup = document.getElementById('bowling-popup');
-  const img = document.getElementById('bowling-popup-img');
-  if (!popup || !img) return;
+  // Bump sequence so older onload handlers are ignored
+  bowlingPopupSequence += 1;
+  const thisSeq = bowlingPopupSequence;
 
-  img.src = imgSrc;
-
-  // Show popup
-  popup.classList.remove('hidden');
-
-  // Clear any previous timer
+  // Kill any previous hide timer and hide immediately
   if (bowlingPopupTimeout) {
     clearTimeout(bowlingPopupTimeout);
+    bowlingPopupTimeout = null;
   }
 
-  // Hide after 3 seconds
-  bowlingPopupTimeout = setTimeout(() => {
+  // Hide while we swap the image
+  popup.classList.add('hidden');
+
+  img.onload = () => {
+    // Ignore if a newer popup started
+    if (thisSeq !== bowlingPopupSequence) return;
+
+    popup.classList.remove('hidden');
+
+    // Start 3s timer to hide
+    bowlingPopupTimeout = setTimeout(() => {
+      popup.classList.add('hidden');
+    }, 3000);
+  };
+
+  img.onerror = () => {
+    if (thisSeq !== bowlingPopupSequence) return;
+    console.warn('Failed to load popup image:', imgSrc);
     popup.classList.add('hidden');
-  }, 3000);
+  };
+
+  // Force reload even if same URL as last time
+  img.src = '';
+  img.src = imgSrc;
 }
+
 
 // ================== EVENT DETECTION FOR LATEST ROLL ==================
 
