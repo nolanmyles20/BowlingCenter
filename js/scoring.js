@@ -81,24 +81,20 @@ export function scoreGame(rolls, maxFrames = 10) {
 // Path to your JSON config:
 // Example file: public/config/popup_images.json
 // {
-//   "strike": [
-//     "images/strike/strike1.png",
-//     "images/strike/strike2.png",
-//     "BowlingCenter/images/IMG_5219.gif"
-//   ],
-//   "spare": [
-//     "images/spare/spare1.png"
-//   ],
-//   "gutter": [
-//     "images/gutter/gutter1.png"
-//   ]
+//   "strike": [...],
+//   "spare":  [...],
+//   "gutter": [...],
+//   "perfect": ["images/300/IMG_5237.gif"],
+//   "turkey":  ["images/turkey/IMG_5238.gif"]
 // }
 const POPUP_IMAGES_CONFIG_URL = 'config/popup_images.json';
 
 let popupImagesConfig = {
   strike: [],
   spare: [],
-  gutter: []
+  gutter: [],
+  perfect: [],
+  turkey: []
 };
 
 // Popup timing and sequence tracking
@@ -118,7 +114,9 @@ export async function loadPopupImagesConfig() {
     popupImagesConfig = {
       strike: Array.isArray(data.strike) ? data.strike : [],
       spare: Array.isArray(data.spare) ? data.spare : [],
-      gutter: Array.isArray(data.gutter) ? data.gutter : []
+      gutter: Array.isArray(data.gutter) ? data.gutter : [],
+      perfect: Array.isArray(data.perfect) ? data.perfect : [],
+      turkey: Array.isArray(data.turkey) ? data.turkey : []
     };
 
     console.log('Popup images config loaded', popupImagesConfig);
@@ -132,16 +130,9 @@ void loadPopupImagesConfig();
 
 /**
  * Low-level popup function. Shows a random image for the given type:
- * type = 'strike' | 'spare' | 'gutter'
+ * type = 'strike' | 'spare' | 'gutter' | 'perfect' | 'turkey'
  */
 export function showBowlingPopup(type) {
-  const pool = popupImagesConfig[type];
-
-  if (!Array.isArray(pool) || pool.length === 0) {
-    console.warn('No popup images configured for type:', type);
-    return;
-  }
-
   const popup = document.getElementById('bowling-popup');
   const img = document.getElementById('bowling-popup-img');
   const label = document.getElementById('bowling-popup-label');
@@ -151,9 +142,22 @@ export function showBowlingPopup(type) {
     return;
   }
 
-  // Big label text: STRIKE / SPARE / GUTTER
+  // Get pool from JSON for ANY type, including perfect/turkey
+  const pool = popupImagesConfig[type];
+  if (!Array.isArray(pool) || pool.length === 0) {
+    console.warn('No popup images configured for type:', type);
+    return;
+  }
+
+  // Label text:
   if (label) {
-    label.textContent = (type || '').toUpperCase();
+    if (type === 'perfect') {
+      label.textContent = 'PERFECT GAME';
+    } else if (type === 'turkey') {
+      label.textContent = 'TURKEY';
+    } else {
+      label.textContent = (type || '').toUpperCase();
+    }
   }
 
   const randomIndex = Math.floor(Math.random() * pool.length);
@@ -361,6 +365,26 @@ export function maybeShowBowlingPopupForBowler(rolls, bowler, maxFrames = 10) {
   // Only active bowlers (not absent)
   if (!bowler || bowler.absent) return;
 
+  // 🔥 PERFECT GAME: total score is 300
+  const scoring = scoreGame(rolls, maxFrames);
+  if (scoring.total === 300) {
+    showBowlingPopup('perfect');
+    return;
+  }
+
+  // 🔥 TURKEY: last 3 rolls are all strikes (10,10,10)
+  if (rolls.length >= 3) {
+    const r1 = rolls[rolls.length - 1];
+    const r2 = rolls[rolls.length - 2];
+    const r3 = rolls[rolls.length - 3];
+
+    if (r1 === 10 && r2 === 10 && r3 === 10) {
+      showBowlingPopup('turkey');
+      return;
+    }
+  }
+
+  // Existing strike/spare/gutter logic
   const eventType = detectPopupEventForRoll(rolls, maxFrames);
   if (!eventType) return;
 
