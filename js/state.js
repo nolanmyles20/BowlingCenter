@@ -101,6 +101,16 @@ export function saveState() {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
 }
 
+// ---------- leagues helper ----------
+
+export function listLeagueNames() {
+  const leaguesObj = state.leagues || {};
+  return Object.values(leaguesObj)
+    .map(lg => lg.name || lg.leagueName || lg.league || '')
+    .filter(Boolean)
+    .sort((a, b) => a.localeCompare(b));
+}
+
 // ---------- lane + players ----------
 
 function ensureLane(laneId) {
