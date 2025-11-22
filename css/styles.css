@@ -745,3 +745,50 @@ a:visited {
   font-weight: 600 !important;
   opacity: 1 !important;
 }
+/* ======== Lane orientation handling ======== */
+
+.lane-body {
+  position: relative;
+}
+
+/* Overlay defaults: hidden on desktop / anything */
+#rotate-overlay {
+  position: fixed;
+  inset: 0;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 2rem;
+  background: rgba(0, 0, 0, 0.9);
+  color: #fff;
+  font-size: 1.3rem;
+  z-index: 9999;
+}
+
+#rotate-overlay .rotate-message {
+  max-width: 24rem;
+  line-height: 1.4;
+}
+
+/* Mobile portrait: show overlay, hide lane content */
+@media screen and (max-width: 900px) and (orientation: portrait) {
+  .lane-body .lane-content {
+    display: none;
+  }
+
+  .lane-body #rotate-overlay {
+    display: flex;
+  }
+}
+
+/* Mobile landscape: show content, hide overlay */
+@media screen and (max-width: 900px) and (orientation: landscape) {
+  .lane-body .lane-content {
+    display: block;
+  }
+
+  .lane-body #rotate-overlay {
+    display: none;
+  }
+}
