@@ -25,7 +25,9 @@ function renderBowlerTable() {
   if (!tbody) return;
 
   const bowlers = listBowlers().slice().sort((a, b) => {
-    return (a.name || '').localeCompare(b.name || '');
+    const nameA = (a.name || `${a.first_name || ''} ${a.last_name || ''}`).trim();
+    const nameB = (b.name || `${b.first_name || ''} ${b.last_name || ''}`).trim();
+    return nameA.localeCompare(nameB);
   });
 
   tbody.innerHTML = '';
@@ -34,21 +36,41 @@ function renderBowlerTable() {
     const tr = document.createElement('tr');
     tr.dataset.id = b.id;
 
-    // new fields supported from CSV
-    const name = b.name || 'Unknown';
-    const gender = b.gender || '';
-    const avg = b.average ?? '';
-    const handicap = b.handicap ?? 0;
-    const games = b.games ?? '';
-    const league = b.league || '';
+    // Name: prefer single name, else first + last from CSV
+    const name =
+      (b.name || `${b.first_name || ''} ${b.last_name || ''}`.trim()) || 'Unknown';
+
+    const gender      = b.gender || '';
+    const hcp         = b.hcp ?? b.handicap ?? '';
+    const league      = b.league || b.league_name || '';
+    const teamNumber  = b.team_number ?? b.teamNumber ?? '';
+    const posNumber   = b.pos_number ?? b.posNumber ?? '';
+    const pins        = b.pins ?? '';
+    const games       = b.games ?? '';
+    const avg         = b.avg ?? b.average ?? '';
+    const enteringAvg = b.entering_avg ?? b.enteringAverage ?? '';
+    const hhg         = b.hhg ?? '';
+    const hhs         = b.hhs ?? '';
+    const hsg         = b.hsg ?? '';
+    const hss         = b.hss ?? '';
+    const mib         = b.mib ?? '';
 
     tr.innerHTML = `
       <td>${name}</td>
       <td>${gender}</td>
-      <td>${avg}</td>
-      <td>${handicap}</td>
-      <td>${games}</td>
+      <td>${hcp}</td>
       <td>${league}</td>
+      <td>${teamNumber}</td>
+      <td>${posNumber}</td>
+      <td>${pins}</td>
+      <td>${games}</td>
+      <td>${avg}</td>
+      <td>${enteringAvg}</td>
+      <td>${hhg}</td>
+      <td>${hhs}</td>
+      <td>${hsg}</td>
+      <td>${hss}</td>
+      <td>${mib}</td>
       <td>
         <button class="btn-small btn-edit">Edit</button>
         <button class="btn-small btn-delete">Delete</button>
