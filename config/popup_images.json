@@ -1,15 +1,17 @@
 {
   "strike": [
-    "images/strike/strike1.png",
-    "images/strike/strike2.png",
-    "BowlingCenter/images/IMG_5219.gif"
+    "images/strike/IMG_8833.jpeg",
+    "images/strike/IMG_8855.jpeg",
+    "images/strike/IMG_8856.jpeg"
   ],
   "spare": [
     "images/spare/spare1.png",
     "images/spare/spare2.png"
   ],
   "gutter": [
-    "images/gutter/gutter1.png",
+    "images/gutter/IMG_5219.gif",
     "images/gutter/gutter_sad.gif"
   ]
 }
+
+
