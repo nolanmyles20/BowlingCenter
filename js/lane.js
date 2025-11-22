@@ -777,19 +777,31 @@ function renderScore(laneId) {
     row.appendChild(labelCell);
 
     const framesToShow = p.fullFrames.slice(startFrame - 1, endFrame);
-
+    
     framesToShow.forEach((frame) => {
       const cell = document.createElement('div');
       cell.className = 'scoreboard-cell player-frame-cell';
-
+  
       const [firstSymbol, secondSymbol] = formatFrameRolls(frame.frame - 1, frame);
       const frameScore = frame.running_total;
+
+  // Always show first roll symbol (even if it's "-", that's the actual ball)
+      let rollsHtml = `
+        <span class="roll roll1">${firstSymbol}</span>
+      `;
+
+  // Only show second roll if it actually exists in the frame data
+  // (so we don't show a fake "-" placeholder that looks like a second gutter)
+      if (frame.rolls && frame.rolls.length > 1) {
+        rollsHtml += `
+          <span class="roll roll2">${secondSymbol}</span>
+        `;
+      }
 
       cell.innerHTML = `
         <div class="frame-score">${frameScore != null ? frameScore : ''}</div>
         <div class="rolls-row">
-          <span class="roll roll1">${firstSymbol}</span>
-          <span class="roll roll2">${secondSymbol}</span>
+          ${rollsHtml}
         </div>
       `;
 
