@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Leagues – Bowling Center</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="stylesheet" href="css/styles.css" />
+  <link rel="icon" type="image/x-icon" href="images/bowling_pin.ico">
+</head>
+<body class="admin-body">
+  <header class="top-bar">
+    <h1>Leagues</h1>
+    <nav class="main-nav">
+      <a href="frontdesk.html">Front Desk</a>
+      <a href="bowlers.html">Bowlers</a>
+      <a href="teams.html">Teams</a>
+      <a href="leagues.html" class="active">Leagues</a>
+    </nav>
+  </header>
+
+  <main class="content">
+    <section class="card">
+      <h2>League List</h2>
+      <p>Loaded from <code>data/leagues.csv</code></p>
+
+      <div class="table-wrapper">
+        <table id="leagues-table">
+          <thead>
+            <tr>
+              <th>League ID</th>
+              <th>Name</th>
+              <th>Season</th>
+              <th>Center ID</th>
+              <!-- Keep an Action column like Bowlers/Teams pages -->
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            <!-- Filled by leagues.js -->
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+
+  <script type="module" src="js/leagues.js"></script>
+</body>
+</html>
