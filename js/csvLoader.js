@@ -43,5 +43,5 @@ export async function loadAllCsv() {
     fetchCsv('data/leagues.csv')
   ]);
 
-  return { bowlers, teams, leagues };
+  return { bowlers, teams, leagues,team_roster: teamRoster };
 }
