@@ -20,10 +20,13 @@ function buildLeagueOptions(selected) {
   return html;
 }
 
+/* ---------- table render ---------- */
+
 function renderBowlerTable() {
   const tbody = document.getElementById('bowler-table-body');
   if (!tbody) return;
 
+  // Always get current list from state (which is fed by CSV via initStateFromCsv)
   const bowlers = listBowlers().slice().sort((a, b) => {
     const nameA = (a.name || `${a.first_name || ''} ${a.last_name || ''}`).trim();
     const nameB = (b.name || `${b.first_name || ''} ${b.last_name || ''}`).trim();
@@ -36,7 +39,7 @@ function renderBowlerTable() {
     const tr = document.createElement('tr');
     tr.dataset.id = b.id;
 
-    // Name: prefer single name, else first + last from CSV
+    // Name: prefer single field, else build from first/last in CSV
     const name =
       (b.name || `${b.first_name || ''} ${b.last_name || ''}`.trim()) || 'Unknown';
 
@@ -83,6 +86,8 @@ function renderBowlerTable() {
   attachBowlerRowHandlers();
 }
 
+/* ---------- row actions ---------- */
+
 function attachBowlerRowHandlers() {
   document.querySelectorAll('.btn-edit').forEach(btn => {
     btn.onclick = () => {
@@ -92,12 +97,16 @@ function attachBowlerRowHandlers() {
       if (!b) return;
 
       document.getElementById('bowler-id').value = b.id;
-      document.getElementById('bowler-name').value = b.name || '';
+      document.getElementById('bowler-name').value =
+        b.name || `${b.first_name || ''} ${b.last_name || ''}`.trim();
       document.getElementById('bowler-gender').value = b.gender || '';
-      document.getElementById('bowler-handicap').value = b.handicap ?? 0;
+
+      // Use either hcp or handicap field for the form
+      const handicap = b.hcp ?? b.handicap ?? 0;
+      document.getElementById('bowler-handicap').value = handicap;
 
       const leagueSelect = document.getElementById('bowler-league');
-      leagueSelect.innerHTML = buildLeagueOptions(b.league || '');
+      leagueSelect.innerHTML = buildLeagueOptions(b.league || b.league_name || '');
 
       document.getElementById('bowler-form-title').textContent = 'Edit Bowler';
       document.getElementById('btn-save-bowler').textContent = 'Update Bowler';
@@ -119,7 +128,7 @@ function attachBowlerRowHandlers() {
 /* ---------- init ---------- */
 
 document.addEventListener('DOMContentLoaded', async () => {
-  // load CSV → populate state
+  // Load all CSV data into shared state (bowlers, teams, leagues, etc.)
   await initStateFromCsv();
 
   const leagueSelect = document.getElementById('bowler-league');
@@ -138,7 +147,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     const idVal = document.getElementById('bowler-id').value;
     const name = document.getElementById('bowler-name').value.trim();
     const gender = document.getElementById('bowler-gender').value;
-    const handicap = parseInt(document.getElementById('bowler-handicap').value, 10) || 0;
+    const handicap = parseInt(
+      document.getElementById('bowler-handicap').value,
+      10
+    ) || 0;
     const league = document.getElementById('bowler-league').value;
 
     if (!name) {
@@ -146,7 +158,13 @@ document.addEventListener('DOMContentLoaded', async () => {
       return;
     }
 
-    const payload = { name, gender, handicap, league };
+    const payload = {
+      name,
+      gender,
+      // Normalize back to the property state.js expects
+      handicap,
+      league
+    };
 
     if (idVal) {
       updateBowler(idVal, payload);
