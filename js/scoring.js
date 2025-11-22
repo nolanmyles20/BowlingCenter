@@ -101,7 +101,9 @@ let popupImagesConfig = {
   gutter: []
 };
 
+// Popup timing and sequence tracking
 let bowlingPopupTimeout = null;
+let bowlingPopupSequence = 0; // ensures old loads cannot flash through
 
 /**
  * Load popup images config from JSON.
@@ -132,9 +134,6 @@ void loadPopupImagesConfig();
  * Low-level popup function. Shows a random image for the given type:
  * type = 'strike' | 'spare' | 'gutter'
  */
-let bowlingPopupTimeout = null;
-let bowlingPopupSequence = 0; // to ignore stale loads
-
 export function showBowlingPopup(type) {
   const pool = popupImagesConfig[type];
 
@@ -153,26 +152,24 @@ export function showBowlingPopup(type) {
   const randomIndex = Math.floor(Math.random() * pool.length);
   const imgSrc = pool[randomIndex];
 
-  // Bump sequence so older onload handlers are ignored
+  // Start a new popup sequence
   bowlingPopupSequence += 1;
   const thisSeq = bowlingPopupSequence;
 
-  // Kill any previous hide timer and hide immediately
+  // Stop any previous hide timer & hide immediately
   if (bowlingPopupTimeout) {
     clearTimeout(bowlingPopupTimeout);
     bowlingPopupTimeout = null;
   }
 
-  // Hide while we swap the image
-  popup.classList.add('hidden');
+  popup.classList.add('hidden'); // hide while swapping image
 
   img.onload = () => {
-    // Ignore if a newer popup started
+    // If another popup began after this one, ignore this load
     if (thisSeq !== bowlingPopupSequence) return;
 
     popup.classList.remove('hidden');
 
-    // Start 3s timer to hide
     bowlingPopupTimeout = setTimeout(() => {
       popup.classList.add('hidden');
     }, 3000);
@@ -188,7 +185,6 @@ export function showBowlingPopup(type) {
   img.src = '';
   img.src = imgSrc;
 }
-
 
 // ================== EVENT DETECTION FOR LATEST ROLL ==================
 
@@ -281,7 +277,6 @@ export function detectPopupEventForRoll(rolls, maxFrames = 10) {
     // 10th frame:
     const firstIdx = indices[0];
     const secondIdx = indices[1];
-    const thirdIdx = indices[2];
 
     const firstPins = rolls[firstIdx] ?? 0;
     const secondPins = secondIdx !== undefined ? (rolls[secondIdx] ?? 0) : 0;
