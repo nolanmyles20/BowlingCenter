@@ -98,7 +98,7 @@ const POPUP_IMAGES_CONFIG_URL = 'config/popup_images.json';
 let popupImagesConfig = {
   strike: [],
   spare: [],
-  gutter: []
+  gutter: ["BowlingCenter/images/IMG_5219.gif"]
 };
 
 let bowlingPopupTimeout = null;
