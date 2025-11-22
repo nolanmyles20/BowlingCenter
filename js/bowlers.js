@@ -10,6 +10,7 @@ import {
 
 /* ---------- helpers ---------- */
 
+// Build league options for the form select (Add/Edit Bowler)
 function buildLeagueOptions(selected) {
   const leagues = listLeagues().map(l => l.name);
   let html = '<option value="">-- None --</option>';
@@ -20,6 +21,35 @@ function buildLeagueOptions(selected) {
   return html;
 }
 
+// Populate the league filter select in the "All Bowlers" section
+function populateLeagueFilter() {
+  const select = document.getElementById('bowler-league-filter');
+  if (!select) return;
+
+  const leagues = listLeagues().map(l => l.name).filter(Boolean);
+  const unique = Array.from(new Set(leagues)).sort((a, b) =>
+    a.localeCompare(b)
+  );
+
+  let html = '<option value="">All Leagues</option>';
+  unique.forEach(name => {
+    html += `<option value="${name}">${name}</option>`;
+  });
+
+  select.innerHTML = html;
+}
+
+// Get current league + search filters from the page
+function getCurrentFilters() {
+  const leagueSelect = document.getElementById('bowler-league-filter');
+  const searchInput = document.getElementById('bowler-search');
+
+  const leagueFilter = leagueSelect ? leagueSelect.value : '';
+  const searchQuery = searchInput ? searchInput.value.trim().toLowerCase() : '';
+
+  return { leagueFilter, searchQuery };
+}
+
 /* ---------- table render ---------- */
 
 function renderBowlerTable() {
@@ -27,15 +57,40 @@ function renderBowlerTable() {
   if (!tbody) return;
 
   // Always get current list from state (which is fed by CSV via initStateFromCsv)
-  const bowlers = listBowlers().slice().sort((a, b) => {
+  const allBowlers = listBowlers().slice().sort((a, b) => {
     const nameA = (a.name || `${a.first_name || ''} ${a.last_name || ''}`).trim();
     const nameB = (b.name || `${b.first_name || ''} ${b.last_name || ''}`).trim();
     return nameA.localeCompare(nameB);
   });
 
+  const { leagueFilter, searchQuery } = getCurrentFilters();
+
+  // Apply filters
+  const filtered = allBowlers.filter(b => {
+    const name =
+      (b.name || `${b.first_name || ''} ${b.last_name || ''}`.trim()) ||
+      'Unknown';
+    const league = (b.league || b.league_name || '').trim();
+
+    // League filter
+    if (leagueFilter && league !== leagueFilter) {
+      return false;
+    }
+
+    // Name search filter
+    if (searchQuery) {
+      const nameLower = name.toLowerCase();
+      if (!nameLower.includes(searchQuery)) {
+        return false;
+      }
+    }
+
+    return true;
+  });
+
   tbody.innerHTML = '';
 
-  bowlers.forEach(b => {
+  filtered.forEach(b => {
     const tr = document.createElement('tr');
     tr.dataset.id = b.id;
 
@@ -131,11 +186,32 @@ document.addEventListener('DOMContentLoaded', async () => {
   // Load all CSV data into shared state (bowlers, teams, leagues, etc.)
   await initStateFromCsv();
 
+  // League select in the form
   const leagueSelect = document.getElementById('bowler-league');
   if (leagueSelect) {
     leagueSelect.innerHTML = buildLeagueOptions('');
   }
 
+  // League filter dropdown in the table section
+  populateLeagueFilter();
+
+  // Hook up league filter change
+  const leagueFilter = document.getElementById('bowler-league-filter');
+  if (leagueFilter) {
+    leagueFilter.addEventListener('change', () => {
+      renderBowlerTable();
+    });
+  }
+
+  // Hook up name search box
+  const searchInput = document.getElementById('bowler-search');
+  if (searchInput) {
+    searchInput.addEventListener('input', () => {
+      renderBowlerTable();
+    });
+  }
+
+  // Initial render
   renderBowlerTable();
 
   const form = document.getElementById('bowler-form');
