@@ -637,7 +637,7 @@ a:visited {
 /* Rolls — X, /, numbers inside frame */
 .scoreboard-cell .rolls-row .roll,
 .team-row .rolls-row .roll {
-  font-size: 2.6rem !important;
+  font-size: 1.8rem !important;
   font-weight: 800 !important;
 }
 
@@ -663,7 +663,7 @@ a:visited {
 .scoreboard-row .player-sub,   /* in case your HTML uses this class */
 .player-hcp,
 .player-sub {
-  font-size: 1.6rem !important;    /* DOUBLE size */
+  font-size: 1.8rem !important;    /* DOUBLE size */
   font-weight: 700 !important;     /* bold */
   color: var(--color-score-text, #ffffff) !important;
   letter-spacing: 0.3px;
