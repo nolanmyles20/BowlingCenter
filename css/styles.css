@@ -606,3 +606,8 @@ main {
 .main-nav a:visited {
   color: inherit !important;
 }
+a:link,
+a:visited {
+  color: inherit;
+  text-decoration: none;
+}
