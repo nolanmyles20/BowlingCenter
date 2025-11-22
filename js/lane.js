@@ -9,7 +9,7 @@ import {
   advanceToNextPlayer,
   updateLane
 } from './state.js';
-import { scoreGame } from './scoring.js';
+import { scoreGame, showBowlingPopup } from './scoring.js';
 
 const VIEW_MODE_KEY_PREFIX = 'lane_view_mode_'; // per lane: 'full' or 'compact';
 
@@ -473,6 +473,68 @@ function startNextGameFromModal(laneId) {
 }
 
 /* ---------------------------------------------------------
+   Simple event detection for current roll (Option A)
+--------------------------------------------------------- */
+
+// Detect strike / spare / gutter for the *new* roll
+// rollsBefore = rolls array BEFORE this roll
+// pins = effectivePins for this roll (after 9-pin conversion)
+// Returns: 'strike' | 'spare' | 'gutter' | null
+function detectRollEvent(rollsBefore, pins, maxFrames = 10) {
+  // How many frames 1–9 are already complete?
+  const completedFramesBefore = countCompletedFrames9(rollsBefore);
+
+  // -------- Frames 1–9 ----------
+  if (completedFramesBefore < 9) {
+    const ctx = getSecondBallContextFrames1to9(rollsBefore);
+    const isFirstBall = !ctx.isSecondBall;
+
+    if (isFirstBall) {
+      // Strike on first ball
+      if (pins === 10) return 'strike';
+    } else {
+      // Second ball: spare?
+      const frameTotal = (ctx.pinsSoFar || 0) + pins;
+      if (frameTotal === 10 && pins > 0) return 'spare';
+    }
+
+    if (pins === 0) return 'gutter';
+    return null;
+  }
+
+  // -------- 10th frame ----------
+  // Find where 10th frame starts in rollsBefore
+  let frame = 0;
+  let i = 0;
+  while (frame < 9 && i < rollsBefore.length) {
+    const r = rollsBefore[i];
+    if (r === 10) {
+      frame += 1;
+      i += 1;
+    } else {
+      frame += 1;
+      i += 2;
+    }
+  }
+  const tenthBefore = rollsBefore.slice(i);
+  const rollCountAfter = tenthBefore.length + 1;
+
+  if (rollCountAfter === 1) {
+    // First ball of 10th
+    if (pins === 10) return 'strike';
+  } else if (rollCountAfter === 2) {
+    // Second ball of 10th: spare only if first was not strike
+    const first = tenthBefore[0] ?? 0;
+    if (first !== 10 && first + pins === 10 && pins > 0) {
+      return 'spare';
+    }
+  }
+
+  if (pins === 0) return 'gutter';
+  return null;
+}
+
+/* ---------------------------------------------------------
    Handle roll input
 --------------------------------------------------------- */
 
@@ -504,6 +566,13 @@ function handleRoll(laneId, pins) {
     }
   }
 
+  // Decide event *before* we mutate rolls, and only for non-absent bowlers
+  let eventType = null;
+  if (!currentPlayerBefore.absent) {
+    eventType = detectRollEvent(rollsBefore, effectivePins, 10);
+  }
+
+  // Actually record the roll
   addRollForCurrentPlayer(laneId, effectivePins);
 
   const laneAfter = getLane(laneId);
@@ -511,6 +580,12 @@ function handleRoll(laneId, pins) {
   const currentPlayerAfter = playersAfter[currentIndex] || { games: [{ rolls: [] }] };
   const gameAfter = currentPlayerAfter.games?.[gIndex] || { rolls: [] };
   const rollsAfter = Array.isArray(gameAfter.rolls) ? gameAfter.rolls : [];
+
+  // Show popup if we detected a strike/spare/gutter for this (non-absent) bowler
+  if (eventType) {
+    console.log('Showing bowling popup:', eventType);
+    showBowlingPopup(eventType);
+  }
 
   if (didLastRollCompleteFrame(rollsBefore, rollsAfter)) {
     advanceToNextPlayer(laneId);
