@@ -611,3 +611,9 @@ a:visited {
   color: inherit;
   text-decoration: none;
 }
+/* Score text color (per-frame + totals) */
+.scoreboard-cell .frame-score,
+.scoreboard-cell .rolls-row span,
+.team-row .frame-score {
+  color: var(--color-score-text, #f8d7c0);
+}
