@@ -829,10 +829,22 @@ function renderScore(laneId) {
   for (let f = startFrame; f <= endFrame; f++) {
     const frameIndex = f - 1;
     let teamRunning = 0;
+
     realPlayersForTotals.forEach(p => {
-      const fr = p.fullFrames[frameIndex];
-      if (fr && fr.running_total != null) {
-        teamRunning += fr.running_total;
+      const framesArr = p.fullFrames || [];
+      let best = null;
+
+      // Find this bowler's last completed frame at or before f
+      for (let idx = frameIndex; idx >= 0; idx--) {
+        const fr = framesArr[idx];
+        if (fr && fr.running_total != null) {
+          best = fr.running_total;
+          break;
+        }
+      }
+
+      if (best != null) {
+        teamRunning += best;
       }
     });
 
@@ -846,6 +858,7 @@ function renderScore(laneId) {
     `;
     teamRow.appendChild(cell);
   }
+
 
   let teamScratchTotal = 0;
   let teamHcpTotal = 0;
