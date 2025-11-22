@@ -270,13 +270,20 @@ main {
 }
 
 /* left label / bowler name column */
+/* Name column auto-sizes to longest name */
 .scoreboard .label-cell {
-  flex: 0 0 140px;      /* a bit wider */
-  max-width: 140px;
+  flex: 0 0 auto;          /* remove fixed width */
+  width: auto;             /* width determined by content */
+  max-width: none;         /* no forced max */
+  white-space: nowrap;     /* no wrapping */
+  padding-right: 1rem;     /* spacing before frame 1 */
   box-sizing: border-box;
-  font-weight: 600;
-  font-size: 1.05rem;   /* bigger */
-  color: #e5e7eb;
+}
+
+/* Prevent frame cells from squishing the name column */
+.scoreboard .player-frame-cell,
+.scoreboard .frame-number-cell {
+  flex-shrink: 0;
 }
 
 /* frame number cells and per-frame cells */
