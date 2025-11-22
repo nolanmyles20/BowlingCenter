@@ -116,10 +116,10 @@ function buildTeamOptions(selectedTeamId, selectedLeagueId) {
 async function buildPlayersForLaneFromCsv(laneId, teamId) {
   try {
     if (!teamId) {
-      // No team selected → clear players
+      // No team selected → clear players and team info
       updateLane(laneId, {
         teamId: null,
-        teamName: teamMeta.team_name || null,
+        teamName: null,
         players: [],
         currentPlayerIndex: 0
       });
@@ -131,7 +131,7 @@ async function buildPlayersForLaneFromCsv(laneId, teamId) {
     const rosterRowsRaw = all.team_roster || [];
     const bowlers = all.bowlers || [];
 
-    // Find this team in teams.csv to get league_id + team_number
+    // Find this team in teams.csv to get league_id + team_number + name
     const teamMeta =
       teams.find(
         t => String(t.team_id) === String(teamId)
@@ -143,6 +143,7 @@ async function buildPlayersForLaneFromCsv(laneId, teamId) {
       console.warn('No teamMeta found for teamId', teamId);
       updateLane(laneId, {
         teamId,
+        teamName: null,
         players: [],
         currentPlayerIndex: 0
       });
@@ -209,11 +210,7 @@ async function buildPlayersForLaneFromCsv(laneId, teamId) {
 
       // handicap can come from roster or bowlers
       const hcpRaw =
-        r.hcp ??
-        r.handicap ??
-        bowler.hcp ??
-        bowler.handicap ??
-        0;
+        r.hcp ?? r.handicap ?? bowler.hcp ?? bowler.handicap ?? 0;
       const handicap = Number(hcpRaw) || 0;
 
       return {
@@ -233,8 +230,11 @@ async function buildPlayersForLaneFromCsv(laneId, teamId) {
       `Lane ${laneId} team ${teamId}: built ${players.length} players from CSV roster`
     );
 
+    // ✅ Store teamName so lane screen can show it
     updateLane(laneId, {
       teamId,
+      teamName: teamMeta.team_name || null,
+      league: teamMeta.league_id || null,
       players,
       currentPlayerIndex: 0
     });
@@ -242,6 +242,7 @@ async function buildPlayersForLaneFromCsv(laneId, teamId) {
     console.error('Failed to build lane players from CSV roster:', err);
     updateLane(laneId, {
       teamId,
+      teamName: null,
       players: [],
       currentPlayerIndex: 0
     });
@@ -335,6 +336,7 @@ function attachLaneHandlers() {
       updateLane(laneId, {
         league: newLeagueId,
         teamId: null,
+        teamName: null,
         players: [],
         currentPlayerIndex: 0
       });
