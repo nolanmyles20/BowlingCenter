@@ -20,7 +20,8 @@ const DEFAULT_THEME = {
   rowOdd: '#1e293b',
   rowEven: '#0f172a',
   border: '#991b1b',
-  highlight: '#f97316' // separate color for active row + arrows
+  highlight: '#f97316', // separate color for active row + arrows
+  scoreText: '#f8d7c0' 
 };
 
 function loadTheme() {
