@@ -144,9 +144,16 @@ export function showBowlingPopup(type) {
 
   const popup = document.getElementById('bowling-popup');
   const img = document.getElementById('bowling-popup-img');
+  const label = document.getElementById('bowling-popup-label');
+
   if (!popup || !img) {
     console.warn('Popup elements not found in DOM');
     return;
+  }
+
+  // Label is optional but recommended (big STRIKE/SPARE/GUTTER text)
+  if (label) {
+    label.textContent = (type || '').toUpperCase();
   }
 
   const randomIndex = Math.floor(Math.random() * pool.length);
