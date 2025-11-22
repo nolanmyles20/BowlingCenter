@@ -39,7 +39,7 @@ export async function loadAllCsv() {
   const [bowlers, teams, leagues] = await Promise.all([
     fetchCsv('data/bowlers.csv'),
     fetchCsv('data/teams.csv'),
-    fetchCsv('data/teams_roster.csv'),
+    fetchCsv('data/team_roster.csv'),
     fetchCsv('data/leagues.csv')
   ]);
 
