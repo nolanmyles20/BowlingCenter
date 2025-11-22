@@ -46,7 +46,7 @@
     <section class="panel">
       <h2>Teams & Rosters</h2>
 
-      <!-- ⭐ NEW: League Filter -->
+      <!-- League filter -->
       <div class="filter-row" style="margin-bottom: 1rem;">
         <label for="league-filter">Filter by League:</label>
         <select id="league-filter">
@@ -73,6 +73,16 @@
     <section id="roster-editor" class="panel" style="display:none;">
       <h2 id="roster-title">Edit Roster</h2>
       <p><strong id="roster-team-name"></strong></p>
+
+    
+      <div class="form-row">
+        <label for="roster-search">Search Bowlers:</label>
+        <input
+          type="text"
+          id="roster-search"
+          placeholder="Type to filter bowlers..."
+        >
+      </div>
 
       <div class="form-row">
         <label for="roster-bowlers">Bowlers (Ctrl/Cmd-click to multi-select)</label>
