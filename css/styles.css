@@ -671,3 +671,10 @@ a:visited {
   display: block;
   margin-top: 4px;
 }
+/* Smaller, non-bold scratch-only line in total boxes */
+.scoreboard-cell .rolls-row .roll.scratch-only,
+.team-row .rolls-row .roll.scratch-only {
+  font-size: 1.1rem !important;
+  font-weight: 400 !important;
+  opacity: 0.9;
+}
