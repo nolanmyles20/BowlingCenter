@@ -119,6 +119,7 @@ async function buildPlayersForLaneFromCsv(laneId, teamId) {
       // No team selected → clear players
       updateLane(laneId, {
         teamId: null,
+        teamName: teamMeta.team_name || null,
         players: [],
         currentPlayerIndex: 0
       });
