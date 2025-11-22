@@ -559,7 +559,7 @@ function handleRoll(laneId, pins) {
 
   let effectivePins = pins;
 
-  // 9-pin no-tap logic
+  // 9-pin no-tap logic (only frames 1–9)
   if (lane.mode === '9pin') {
     const ctx = getSecondBallContextFrames1to9(rollsBefore);
     const isFirstBallOfFrame = !ctx.isSecondBall;
@@ -574,32 +574,52 @@ function handleRoll(laneId, pins) {
     eventType = detectRollEvent(rollsBefore, effectivePins, 10);
   }
 
+  // Track completion state BEFORE roll
+  const gameCompleteBefore = isPlayerGameComplete(rollsBefore);
+
   // Actually record the roll
   addRollForCurrentPlayer(laneId, effectivePins);
 
+  // State AFTER roll
   const laneAfter = getLane(laneId);
   const playersAfter = laneAfter.players || [];
   const currentPlayerAfter = playersAfter[currentIndex] || { games: [{ rolls: [] }] };
   const gameAfter = currentPlayerAfter.games?.[gIndex] || { rolls: [] };
   const rollsAfter = Array.isArray(gameAfter.rolls) ? gameAfter.rolls : [];
 
-  // Show popup if we detected a strike/spare/gutter for this (non-absent) bowler
+  // Show popup for strike / spare / gutter / etc. if we detected one
   if (eventType) {
     console.log('Showing bowling popup:', eventType);
     showBowlingPopup(eventType);
   }
 
-  if (didLastRollCompleteFrame(rollsBefore, rollsAfter)) {
+  // Did this roll just complete a frame 1–9?
+  const frameJustCompleted = didLastRollCompleteFrame(rollsBefore, rollsAfter);
+
+  // Is this player’s ENTIRE game complete now (including 10th frame rules)?
+  const gameCompleteNow = isPlayerGameComplete(rollsAfter);
+
+  // --- Advance logic ---
+  // 1) If game just became complete (10th frame, including open), move to next bowler
+  if (!gameCompleteBefore && gameCompleteNow) {
+    advanceToNextPlayer(laneId);
+  }
+  // 2) Otherwise, if we just completed a frame 1–9 (but not whole game), advance
+  else if (frameJustCompleted && !gameCompleteNow) {
     advanceToNextPlayer(laneId);
   }
 
+  // Auto-skip any absent bowlers that follow
   autoProcessAbsent(laneId);
 
+  // Re-render
   renderScore(laneId);
   renderPinButtons(getLane(laneId));
 
+  // Check if the whole game for the lane is now done
   checkAndHandleGameComplete(laneId);
 }
+
 
 /* ---------------------------------------------------------
    Scoring grid helpers
