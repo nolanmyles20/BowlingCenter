@@ -151,7 +151,7 @@ export function showBowlingPopup(type) {
     return;
   }
 
-  // Label is optional but recommended (big STRIKE/SPARE/GUTTER text)
+  // Big label text: STRIKE / SPARE / GUTTER
   if (label) {
     label.textContent = (type || '').toUpperCase();
   }
@@ -199,6 +199,12 @@ export function showBowlingPopup(type) {
  * Detects what event (strike/spare/gutter) the **latest roll** produced.
  * Rolls = full rolls array for the bowler AFTER pushing the newest roll.
  * Returns: 'strike' | 'spare' | 'gutter' | null
+ *
+ * Gutter rules (per your request):
+ * - GUTTER only when:
+ *   - First ball of the frame is 0, OR
+ *   - Second ball is 0 AND first ball of that same frame was also 0.
+ * - No gutter popup for a 0 that is just missing a spare (e.g. 7-0).
  */
 export function detectPopupEventForRoll(rolls, maxFrames = 10) {
   if (!Array.isArray(rolls) || rolls.length === 0) return null;
@@ -224,8 +230,6 @@ export function detectPopupEventForRoll(rolls, maxFrames = 10) {
       } else {
         const firstIdx = rollIndex;
         const secondIdx = rollIndex + 1;
-        const first = rolls[firstIdx];
-        const second = rolls[secondIdx] ?? 0;
 
         frameMeta.push({
           frame: frameNum,
@@ -255,30 +259,48 @@ export function detectPopupEventForRoll(rolls, maxFrames = 10) {
   // Find which frame the latest roll belongs to
   const frame = frameMeta.find(f => f.rollIndices.includes(lastRollIndex));
   if (!frame) {
-    // no frame found, just check for gutter
-    return lastPins === 0 ? 'gutter' : null;
+    // If we somehow can't map it to a frame, don't trigger gutter on generic 0
+    return null;
   }
 
   const indices = frame.rollIndices;
   const frameNum = frame.frame;
 
-  // STRIKE
-  // In frames 1-9: first roll of the frame is 10 and it's the latest roll
+  // STRIKE / SPARE / GUTTER logic
   if (frameNum < maxFrames) {
     const firstIdx = indices[0];
-    const firstPins = rolls[firstIdx];
+    const firstPins = rolls[firstIdx] ?? 0;
+    const secondIdx = indices[1];
+    const secondPins = secondIdx !== undefined ? (rolls[secondIdx] ?? 0) : 0;
+
+    // STRIKE: first roll of frame is 10 and it's the latest roll
     if (lastRollIndex === firstIdx && firstPins === 10) {
       return 'strike';
     }
 
-    // SPARE: second roll of the frame completes 10
-    if (indices.length >= 2) {
-      const secondIdx = indices[1];
-      const secondPins = rolls[secondIdx] ?? 0;
-      const sumFirstTwo = (rolls[firstIdx] ?? 0) + secondPins;
-      if (lastRollIndex === secondIdx && sumFirstTwo === 10) {
-        return 'spare';
-      }
+    // SPARE: second roll completes 10
+    if (
+      secondIdx !== undefined &&
+      lastRollIndex === secondIdx &&
+      firstPins + secondPins === 10
+    ) {
+      return 'spare';
+    }
+
+    // GUTTER:
+    // - first ball of the frame is 0
+    if (lastRollIndex === firstIdx && firstPins === 0) {
+      return 'gutter';
+    }
+
+    // - second ball is 0 AND first ball was 0 (double gutter)
+    if (
+      secondIdx !== undefined &&
+      lastRollIndex === secondIdx &&
+      firstPins === 0 &&
+      secondPins === 0
+    ) {
+      return 'gutter';
     }
   } else {
     // 10th frame:
@@ -294,21 +316,35 @@ export function detectPopupEventForRoll(rolls, maxFrames = 10) {
     }
 
     // Spare if latest roll is the **second roll** in 10th and first+second = 10
-    if (secondIdx !== undefined && lastRollIndex === secondIdx && firstPins + secondPins === 10) {
+    if (
+      secondIdx !== undefined &&
+      lastRollIndex === secondIdx &&
+      firstPins + secondPins === 10
+    ) {
       return 'spare';
     }
 
-    // We can optionally treat a 0 in 10th as gutter too
-    if (lastPins === 0) {
+    // GUTTER in 10th:
+    // - first ball is 0
+    if (lastRollIndex === firstIdx && firstPins === 0) {
       return 'gutter';
     }
+
+    // - second ball is 0 AND first ball was 0 (double gutter at start of 10th)
+    if (
+      secondIdx !== undefined &&
+      lastRollIndex === secondIdx &&
+      firstPins === 0 &&
+      secondPins === 0
+    ) {
+      return 'gutter';
+    }
+
+    // We DO NOT treat generic 0s (like 3rd ball, or a 0 after some pins)
+    // as gutter events for popup purposes.
   }
 
-  // GUTTER (any frame) – any single roll of 0 pins
-  if (lastPins === 0) {
-    return 'gutter';
-  }
-
+  // No special event
   return null;
 }
 
