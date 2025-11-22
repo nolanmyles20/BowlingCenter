@@ -45,6 +45,16 @@
 
     <section class="panel">
       <h2>Teams & Rosters</h2>
+
+      <!-- ⭐ NEW: League Filter -->
+      <div class="filter-row" style="margin-bottom: 1rem;">
+        <label for="league-filter">Filter by League:</label>
+        <select id="league-filter">
+          <option value="">All Leagues</option>
+          <!-- JS fills additional options -->
+        </select>
+      </div>
+
       <table class="bowler-table">
         <thead>
           <tr>
@@ -63,12 +73,14 @@
     <section id="roster-editor" class="panel" style="display:none;">
       <h2 id="roster-title">Edit Roster</h2>
       <p><strong id="roster-team-name"></strong></p>
+
       <div class="form-row">
         <label for="roster-bowlers">Bowlers (Ctrl/Cmd-click to multi-select)</label>
         <select id="roster-bowlers" multiple size="8">
           <!-- filled by JS -->
         </select>
       </div>
+
       <div class="form-actions">
         <button type="button" class="btn-primary" id="btn-roster-save">Save Roster</button>
         <button type="button" class="btn-secondary" id="btn-roster-cancel">Cancel</button>
