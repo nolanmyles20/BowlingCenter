@@ -61,13 +61,20 @@
     <section class="panel">
       <h2>All Bowlers</h2>
 
-      <!-- New league filter for bowlers table -->
+      <!-- Filter + Search row -->
       <div class="filter-row">
         <label for="bowler-league-filter">Filter by League:</label>
         <select id="bowler-league-filter">
           <option value="">All Leagues</option>
-          <!-- options filled by JS -->
+          <!-- filled by JS (later) -->
         </select>
+
+        <label for="bowler-search" style="margin-left:1rem;">Search Name:</label>
+        <input
+          type="text"
+          id="bowler-search"
+          placeholder="Search bowler name..."
+        >
       </div>
 
       <table class="bowler-table">
