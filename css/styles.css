@@ -731,3 +731,10 @@ a:visited {
   border-color: var(--accent-color, #4CAF50);
   color: #fff;
 }
+/* Make nav buttons consistent across all pages – no green active state */
+.main-nav a.active,
+.top-bar nav a.active {
+  background: #f4f4f4;     /* same as normal */
+  border-color: #d1d1d1;   /* same as normal */
+  color: #333;             /* same as normal */
+}
