@@ -34,14 +34,19 @@ async function fetchCsv(path) {
   return parseCsv(text);
 }
 
-// Main entry – load all three CSVs
+// Main entry – load all four CSVs
 export async function loadAllCsv() {
-  const [bowlers, teams, leagues] = await Promise.all([
+  const [bowlers, teams, team_roster, leagues] = await Promise.all([
     fetchCsv('data/bowlers.csv'),
     fetchCsv('data/teams.csv'),
     fetchCsv('data/team_roster.csv'),
     fetchCsv('data/leagues.csv')
   ]);
 
-  return { bowlers, teams, leagues,team_roster: teamRoster };
+  return {
+    bowlers,
+    teams,
+    leagues,
+    team_roster
+  };
 }
