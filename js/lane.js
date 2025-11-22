@@ -764,15 +764,15 @@ function renderScore(laneId) {
         </div>
       `
       : '';
-
+    const fullName = player.name || '';
+    const [firstName, ...restNameParts] = fullName.split(' ');
+    const lastName = restNameParts.join(' ');
     labelCell.innerHTML = `
-      <div class="player-name${p.absent ? ' absent' : ''}">
-        ${p.name}${absentText}
+      <div class="player-name">
+        <span class="player-first">${firstName}</span>
+        ${lastName ? `<span class="player-last">${lastName}</span>` : ''}
       </div>
-      <div class="player-total">
-        HCP ${p.handicap || 0}
-      </div>
-      ${arrowsHtml}
+      <div class="player-hcp">HCP ${player.handicap || 0}</div>
     `;
     row.appendChild(labelCell);
 
