@@ -78,15 +78,6 @@ export function scoreGame(rolls, maxFrames = 10) {
 
 // ================== POPUP CONFIG (JSON-DRIVEN) ==================
 
-// Path to your JSON config:
-// Example file: public/config/popup_images.json
-// {
-//   "strike": [...],
-//   "spare":  [...],
-//   "gutter": [...],
-//   "perfect": ["images/300/IMG_5237.gif"],
-//   "turkey":  ["images/turkey/IMG_5238.gif"]
-// }
 const POPUP_IMAGES_CONFIG_URL = 'config/popup_images.json';
 
 let popupImagesConfig = {
@@ -97,14 +88,9 @@ let popupImagesConfig = {
   turkey: []
 };
 
-// Popup timing and sequence tracking
 let bowlingPopupTimeout = null;
-let bowlingPopupSequence = 0; // ensures old loads cannot flash through
+let bowlingPopupSequence = 0;
 
-/**
- * Load popup images config from JSON.
- * Call once on app startup (we also fire it automatically below).
- */
 export async function loadPopupImagesConfig() {
   try {
     const res = await fetch(POPUP_IMAGES_CONFIG_URL);
@@ -125,13 +111,8 @@ export async function loadPopupImagesConfig() {
   }
 }
 
-// Fire-and-forget auto-load (optional; you can also call it explicitly elsewhere)
 void loadPopupImagesConfig();
 
-/**
- * Low-level popup function. Shows a random image for the given type:
- * type = 'strike' | 'spare' | 'gutter' | 'perfect' | 'turkey'
- */
 export function showBowlingPopup(type) {
   const popup = document.getElementById('bowling-popup');
   const img = document.getElementById('bowling-popup-img');
@@ -142,14 +123,12 @@ export function showBowlingPopup(type) {
     return;
   }
 
-  // Get pool from JSON for ANY type, including perfect/turkey
   const pool = popupImagesConfig[type];
   if (!Array.isArray(pool) || pool.length === 0) {
     console.warn('No popup images configured for type:', type);
     return;
   }
 
-  // Label text:
   if (label) {
     if (type === 'perfect') {
       label.textContent = 'PERFECT GAME';
@@ -163,20 +142,17 @@ export function showBowlingPopup(type) {
   const randomIndex = Math.floor(Math.random() * pool.length);
   const imgSrc = pool[randomIndex];
 
-  // Start a new popup sequence
   bowlingPopupSequence += 1;
   const thisSeq = bowlingPopupSequence;
 
-  // Stop any previous hide timer & hide immediately
   if (bowlingPopupTimeout) {
     clearTimeout(bowlingPopupTimeout);
     bowlingPopupTimeout = null;
   }
 
-  popup.classList.add('hidden'); // hide while swapping image
+  popup.classList.add('hidden');
 
   img.onload = () => {
-    // If another popup began after this one, ignore this load
     if (thisSeq !== bowlingPopupSequence) return;
 
     popup.classList.remove('hidden');
@@ -192,31 +168,17 @@ export function showBowlingPopup(type) {
     popup.classList.add('hidden');
   };
 
-  // Force reload even if same URL as last time
   img.src = '';
   img.src = imgSrc;
 }
 
-// ================== EVENT DETECTION FOR LATEST ROLL ==================
+// ================== EVENT DETECTION ==================
 
-/**
- * Detects what event (strike/spare/gutter) the **latest roll** produced.
- * Rolls = full rolls array for the bowler AFTER pushing the newest roll.
- * Returns: 'strike' | 'spare' | 'gutter' | null
- *
- * Gutter rules (per your request):
- * - GUTTER only when:
- *   - First ball of the frame is 0, OR
- *   - Second ball is 0 AND first ball of that same frame was also 0.
- * - No gutter popup for a 0 that is just missing a spare (e.g. 7-0).
- */
 export function detectPopupEventForRoll(rolls, maxFrames = 10) {
   if (!Array.isArray(rolls) || rolls.length === 0) return null;
 
   const lastRollIndex = rolls.length - 1;
-  const lastPins = rolls[lastRollIndex];
 
-  // Build frame metadata (which roll indices belong to which frame)
   const frameMeta = [];
   let rollIndex = 0;
 
@@ -225,7 +187,6 @@ export function detectPopupEventForRoll(rolls, maxFrames = 10) {
 
     if (frameNum < maxFrames) {
       if (rolls[rollIndex] === 10) {
-        // Strike frame (single roll)
         frameMeta.push({
           frame: frameNum,
           rollIndices: [rollIndex]
@@ -243,46 +204,36 @@ export function detectPopupEventForRoll(rolls, maxFrames = 10) {
         rollIndex += 2;
       }
     } else {
-      // 10th frame can have up to 3 rolls
       const firstIdx = rollIndex;
       const secondIdx = rollIndex + 1;
       const thirdIdx = rollIndex + 2;
 
-      const usedIndices = [firstIdx];
-      if (secondIdx < rolls.length) usedIndices.push(secondIdx);
-      if (thirdIdx < rolls.length) usedIndices.push(thirdIdx);
+      const used = [firstIdx];
+      if (secondIdx < rolls.length) used.push(secondIdx);
+      if (thirdIdx < rolls.length) used.push(thirdIdx);
 
       frameMeta.push({
         frame: frameNum,
-        rollIndices: usedIndices
+        rollIndices: used
       });
       break;
     }
   }
 
-  // Find which frame the latest roll belongs to
   const frame = frameMeta.find(f => f.rollIndices.includes(lastRollIndex));
-  if (!frame) {
-    // If we somehow can't map it to a frame, don't trigger gutter on generic 0
-    return null;
-  }
+  if (!frame) return null;
 
   const indices = frame.rollIndices;
   const frameNum = frame.frame;
 
-  // STRIKE / SPARE / GUTTER logic
   if (frameNum < maxFrames) {
     const firstIdx = indices[0];
     const firstPins = rolls[firstIdx] ?? 0;
     const secondIdx = indices[1];
     const secondPins = secondIdx !== undefined ? (rolls[secondIdx] ?? 0) : 0;
 
-    // STRIKE: first roll of frame is 10 and it's the latest roll
-    if (lastRollIndex === firstIdx && firstPins === 10) {
-      return 'strike';
-    }
+    if (lastRollIndex === firstIdx && firstPins === 10) return 'strike';
 
-    // SPARE: second roll completes 10
     if (
       secondIdx !== undefined &&
       lastRollIndex === secondIdx &&
@@ -291,13 +242,8 @@ export function detectPopupEventForRoll(rolls, maxFrames = 10) {
       return 'spare';
     }
 
-    // GUTTER:
-    // - first ball of the frame is 0
-    if (lastRollIndex === firstIdx && firstPins === 0) {
-      return 'gutter';
-    }
+    if (lastRollIndex === firstIdx && firstPins === 0) return 'gutter';
 
-    // - second ball is 0 AND first ball was 0 (double gutter)
     if (
       secondIdx !== undefined &&
       lastRollIndex === secondIdx &&
@@ -307,19 +253,14 @@ export function detectPopupEventForRoll(rolls, maxFrames = 10) {
       return 'gutter';
     }
   } else {
-    // 10th frame:
     const firstIdx = indices[0];
     const secondIdx = indices[1];
 
     const firstPins = rolls[firstIdx] ?? 0;
     const secondPins = secondIdx !== undefined ? (rolls[secondIdx] ?? 0) : 0;
 
-    // Strike if latest roll is the **first roll** in 10th and it's 10
-    if (lastRollIndex === firstIdx && firstPins === 10) {
-      return 'strike';
-    }
+    if (lastRollIndex === firstIdx && firstPins === 10) return 'strike';
 
-    // Spare if latest roll is the **second roll** in 10th and first+second = 10
     if (
       secondIdx !== undefined &&
       lastRollIndex === secondIdx &&
@@ -328,13 +269,8 @@ export function detectPopupEventForRoll(rolls, maxFrames = 10) {
       return 'spare';
     }
 
-    // GUTTER in 10th:
-    // - first ball is 0
-    if (lastRollIndex === firstIdx && firstPins === 0) {
-      return 'gutter';
-    }
+    if (lastRollIndex === firstIdx && firstPins === 0) return 'gutter';
 
-    // - second ball is 0 AND first ball was 0 (double gutter at start of 10th)
     if (
       secondIdx !== undefined &&
       lastRollIndex === secondIdx &&
@@ -343,36 +279,22 @@ export function detectPopupEventForRoll(rolls, maxFrames = 10) {
     ) {
       return 'gutter';
     }
-
-    // We DO NOT treat generic 0s (like 3rd ball, or a 0 after some pins)
-    // as gutter events for popup purposes.
   }
 
-  // No special event
   return null;
 }
 
-// ================== MAIN HELPER (RESPECTS ABSENT FLAG) ==================
+// ================== MAIN POPUP HELPER ==================
 
-/**
- * Call this right after you push a new roll into the bowler's rolls array.
- *
- * @param {number[]} rolls - full rolls array for this bowler (after latest roll)
- * @param {object} bowler - bowler object from your state (must contain .absent)
- * @param {number} [maxFrames=10]
- */
 export function maybeShowBowlingPopupForBowler(rolls, bowler, maxFrames = 10) {
-  // Only active bowlers (not absent)
   if (!bowler || bowler.absent) return;
 
-  // 🔥 PERFECT GAME: total score is 300
   const scoring = scoreGame(rolls, maxFrames);
   if (scoring.total === 300) {
     showBowlingPopup('perfect');
     return;
   }
 
-  // 🔥 TURKEY: last 3 rolls are all strikes (10,10,10)
   if (rolls.length >= 3) {
     const r1 = rolls[rolls.length - 1];
     const r2 = rolls[rolls.length - 2];
@@ -384,9 +306,28 @@ export function maybeShowBowlingPopupForBowler(rolls, bowler, maxFrames = 10) {
     }
   }
 
-  // Existing strike/spare/gutter logic
   const eventType = detectPopupEventForRoll(rolls, maxFrames);
   if (!eventType) return;
 
   showBowlingPopup(eventType);
+}
+
+// =========================================================
+// =============  ABS BOWLER SCORING FIX  ==================
+// =========================================================
+
+/**
+ * Compute the displayed total for a bowler.
+ * - If bowler.absent => ALWAYS returns **210**
+ * - Otherwise        => game total + handicap
+ */
+export function computeDisplayedTotal(rolls, bowler, maxFrames = 10) {
+  if (bowler && bowler.absent) {
+    return 210;
+  }
+
+  const { total } = scoreGame(rolls, maxFrames);
+  const hcp = bowler && Number.isFinite(bowler.hcp) ? bowler.hcp : 0;
+
+  return total + hcp;
 }
