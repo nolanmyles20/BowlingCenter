@@ -15,32 +15,28 @@
       <a href="bowlers.html">Bowlers</a>
       <a href="leagues.html" class="active">Leagues</a>
       <a href="teams.html">Teams</a>
-      
     </nav>
   </header>
 
   <main class="content">
-    <section class="card">
+    <section class="panel">
       <h2>League List</h2>
       <p>Loaded from <code>data/leagues.csv</code></p>
 
-      <div class="table-wrapper">
-        <table id="leagues-table">
-          <thead>
-            <tr>
-              <th>League ID</th>
-              <th>Name</th>
-              <th>Season</th>
-              <th>Center ID</th>
-              <!-- Keep an Action column like Bowlers/Teams pages -->
-              <th>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            <!-- Filled by leagues.js -->
-          </tbody>
-        </table>
-      </div>
+      <table class="bowler-table">
+        <thead>
+          <tr>
+            <th>League ID</th>
+            <th>Name</th>
+            <th>Season</th>
+            <th>Center ID</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody id="leagues-table-body">
+          <!-- Filled by leagues.js -->
+        </tbody>
+      </table>
     </section>
   </main>
 
