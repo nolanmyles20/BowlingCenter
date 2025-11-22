@@ -738,3 +738,10 @@ a:visited {
   border-color: #d1d1d1;   /* same as normal */
   color: #333;             /* same as normal */
 }
+/* Ensure nav buttons look identical on all pages */
+.top-bar nav a,
+.main-nav a {
+  color: #333 !important;
+  font-weight: 600 !important;
+  opacity: 1 !important;
+}
