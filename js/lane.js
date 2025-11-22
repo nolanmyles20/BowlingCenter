@@ -43,6 +43,7 @@ function applyTheme(theme) {
   root.style.setProperty('--color-row-even', t.rowEven);
   root.style.setProperty('--color-score-border', t.border);
   root.style.setProperty('--color-highlight', t.highlight);
+  root.style.setProperty('--color-score-text', t.scoreText);
 }
 
 function saveTheme(theme) {
@@ -1097,6 +1098,7 @@ function openSettingsModal() {
   const rowEven = document.getElementById('theme-row-even');
   const border = document.getElementById('theme-border');
   const highlight = document.getElementById('theme-highlight');
+  const scoreText = document.getElementById('theme-score-text');
 
   if (accent) accent.value = theme.accent;
   if (rowOdd) rowOdd.value = theme.rowOdd;
@@ -1119,6 +1121,7 @@ function saveSettingsFromForm() {
   const rowEven = document.getElementById('theme-row-even');
   const border = document.getElementById('theme-border');
   const highlight = document.getElementById('theme-highlight');
+  const scoreText = document.getElementById('theme-score-text');
 
   const theme = {
     accent: accent?.value || DEFAULT_THEME.accent,
