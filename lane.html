@@ -19,7 +19,6 @@
   </header>
 
   <main class="lane-main">
-    <!-- Compact status row -->
     <section class="panel lane-info-panel">
       <div id="lane-info"></div>
       <div class="game-switcher">
@@ -30,16 +29,11 @@
       <button id="view-toggle" class="btn-small">Show Last 4 Frames</button>
     </section>
 
-    <!-- SCOREBOARD -->
-    <!-- SCOREBOARD -->
     <section class="panel lane-controls-panel">
       <div class="lane-controls-header">
         <h2></h2>
-       
       </div>
-      <!-- Bowling event popup overlay -->
-      
-  <!-- New banner: shown before bowling next game -->
+
       <div id="next-game-banner" class="next-game-banner hidden">
         Bowl to start next game
       </div>
@@ -47,12 +41,10 @@
       <div id="scoreboard" class="scoreboard"></div>
     </section>
 
-    <!-- ENTER ROLL -->
     <section class="panel lane-pin-panel">
       <div id="pin-buttons" class="pins-buttons"></div>
     </section>
 
-    <!-- 3-game series recap -->
     <section id="series-recap" class="panel lane-recap-panel">
       <!-- filled by JS -->
     </section>
@@ -65,20 +57,39 @@
         <h3>Lane Menu</h3>
         <button id="menu-close-btn" class="btn-small btn-secondary">X</button>
       </div>
+
       <div class="modal-body">
+
+        <!-- OPEN BOWLING ONLY (auto-hidden by JS when league/team assigned) -->
+        <button id="menu-add-bowler-btn" class="btn-primary modal-action">
+          ➕ Add Bowler (Open Bowling)
+        </button>
+
+        <button id="menu-remove-bowler-btn" class="btn-secondary modal-action">
+          ➖ Remove Bowler (Open Bowling)
+        </button>
+
+        <hr />
+
+        <!-- Normal game actions -->
         <button id="menu-absent-btn" class="btn-primary modal-action">
           Toggle Current Bowler Absent
         </button>
+
         <button id="menu-skip-btn" class="btn-secondary modal-action">
           Next / Skip Bowler
         </button>
+
         <button id="menu-correct-btn" class="btn-secondary modal-action">
           Score Correction
         </button>
+
         <button id="menu-settings-btn" class="btn-secondary modal-action">
           Lane Colors / Settings
         </button>
+
       </div>
+
       <div class="modal-footer">
         <button id="menu-close-bottom-btn" class="btn-small btn-secondary">
           Close
@@ -94,6 +105,7 @@
         <h3>Lane Colors</h3>
         <button id="settings-close-btn" class="btn-small btn-secondary">X</button>
       </div>
+
       <div class="modal-body">
         <div class="settings-grid">
           <label for="theme-accent">Accent (totals / highlight)</label>
@@ -110,9 +122,9 @@
 
           <label for="theme-highlight">Highlight / Active Bowler</label>
           <input type="color" id="theme-highlight" />
-
         </div>
       </div>
+
       <div class="modal-footer">
         <button id="settings-save-btn" class="btn-primary btn-small">
           Save
@@ -123,18 +135,19 @@
       </div>
     </div>
   </div>
-    <!-- Game complete modal -->
+
+  <!-- Game complete modal -->
   <div id="game-complete-overlay" class="modal-overlay hidden">
     <div class="modal-window">
       <div class="modal-header">
         <h3 id="game-complete-title">Game Complete</h3>
         <button id="game-complete-close" class="btn-small btn-secondary">X</button>
       </div>
+
       <div class="modal-body">
-        <div id="game-complete-summary">
-          <!-- filled by JS with player scores -->
-        </div>
+        <div id="game-complete-summary"></div>
       </div>
+
       <div class="modal-footer">
         <button id="game-complete-next-btn" class="btn-primary btn-small">
           Start Next Game
