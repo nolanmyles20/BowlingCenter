@@ -91,30 +91,29 @@ function buildTeamOptions(selectedId) {
   return html;
 }
 
-/* ---------------- helpers: build lane players from CSV ---------------- */
+/* ---------------- helpers: detect arrays in CSV cache ---------------- */
 
 function detectRosterArray(cache) {
-  // Try obvious keys first
-  let roster =
-    cache.team_roster ||
-    cache.teamRoster ||
-    cache.team_rosters ||
-    cache.teamRosterCsv ||
-    cache.rosters ||
-    null;
+  // Preferred key
+  let roster = cache.team_roster;
 
-  // If that didn't work, scan all entries for something that looks like roster
+  // Try some alternates if needed
+  if (!Array.isArray(roster) || roster.length === 0) {
+    roster =
+      cache.teamRoster ||
+      cache.team_rosters ||
+      cache.rosters ||
+      null;
+  }
+
+  // Generic auto-detect fallback
   if (!Array.isArray(roster) || roster.length === 0) {
     for (const [key, value] of Object.entries(cache)) {
-      if (
-        Array.isArray(value) &&
-        value.length &&
-        typeof value[0] === 'object'
-      ) {
+      if (Array.isArray(value) && value.length && typeof value[0] === 'object') {
         const row = value[0];
         const looksLikeRoster =
           ('bowler_id' in row || 'bowlerId' in row) &&
-          ('team_number' in row || 'team_number' in row || 'team_name' in row || 'position' in row);
+          ('team_number' in row || 'team_name' in row || 'position' in row);
 
         if (looksLikeRoster) {
           console.log('Auto-detected roster array under key:', key, 'length:', value.length);
@@ -134,15 +133,12 @@ function detectRosterArray(cache) {
 }
 
 function detectBowlersArray(cache) {
-  let bowlers = cache.bowlers || null;
+  let bowlers = cache.bowlers;
 
+  // Generic auto-detect fallback
   if (!Array.isArray(bowlers) || bowlers.length === 0) {
     for (const [key, value] of Object.entries(cache)) {
-      if (
-        Array.isArray(value) &&
-        value.length &&
-        typeof value[0] === 'object'
-      ) {
+      if (Array.isArray(value) && value.length && typeof value[0] === 'object') {
         const row = value[0];
         const looksLikeBowlers =
           ('bowler_id' in row || 'bowlerId' in row) &&
@@ -165,7 +161,8 @@ function detectBowlersArray(cache) {
   return bowlers;
 }
 
-// Build the lane.players array for a given lane + teamId from CSV
+/* ---------------- build lane players from CSV ---------------- */
+
 async function buildPlayersForLaneFromCsv(laneId, teamId) {
   try {
     if (!teamId) {
@@ -191,8 +188,7 @@ async function buildPlayersForLaneFromCsv(laneId, teamId) {
     // Find metadata for this team (to get league_id + team_number)
     const teamMeta =
       teams.find(
-        t =>
-          String(t.team_id || t.id || t.TeamID) === String(teamId)
+        t => String(t.team_id || t.id || t.TeamID) === String(teamId)
       ) || null;
 
     console.log('teamMeta for teamId', teamId, ':', teamMeta);
@@ -213,6 +209,7 @@ async function buildPlayersForLaneFromCsv(laneId, teamId) {
 
       console.log('Filtering roster by leagueId/teamNumber:', leagueId, teamNumber);
 
+      // 🔴 This is the critical match: league_id + team_number
       if (leagueId && teamNumber != null) {
         rosterRows = rosterRowsRaw.filter(r =>
           String(r.league_id).trim() === String(leagueId).trim() &&
@@ -233,7 +230,7 @@ async function buildPlayersForLaneFromCsv(laneId, teamId) {
 
     console.log('Roster rows after filtering for team', teamId, ':', rosterRows.length);
 
-    // Sort roster by position so lane order matches the lineup
+    // Sort roster by position so lane order matches the lineup (1,2,3,...)
     const sortedRoster = (rosterRows || []).slice().sort((a, b) => {
       const pa = Number(a.position || a.pos_number || a.pos || 0);
       const pb = Number(b.position || b.pos_number || b.pos || 0);
@@ -243,6 +240,7 @@ async function buildPlayersForLaneFromCsv(laneId, teamId) {
     // Map roster rows to lane "players" with handicap from bowlers.csv
     const players = sortedRoster.map(r => {
       const bowlerIdStr = String(r.bowler_id || r.bowlerId || r.BowlerID || '').trim();
+
       const bowler =
         bowlers.find(
           b => String(b.bowler_id || b.id || b.BowlerID).trim() === bowlerIdStr
@@ -262,6 +260,7 @@ async function buildPlayersForLaneFromCsv(laneId, teamId) {
         '';
       const name = `${first} ${last}`.trim() || 'Bowler';
 
+      // handicap can be on roster or on bowlers.csv
       const hcpRaw =
         r.hcp ??
         r.handicap ??
