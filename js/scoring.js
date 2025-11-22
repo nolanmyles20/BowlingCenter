@@ -96,13 +96,9 @@ export function scoreGame(rolls, maxFrames = 10) {
 const POPUP_IMAGES_CONFIG_URL = 'config/popup_images.json';
 
 let popupImagesConfig = {
-  strike: [
-    "images/strike/IMG_8833.jpeg",
-    "images/strike/IMG_8855.jpeg",
-    "images/strike/IMG_8856.jpeg"
-  ],
+  strike: [],
   spare: [],
-  gutter: ["images/gutter/IMG_5219.gif"]
+  gutter: []
 };
 
 let bowlingPopupTimeout = null;
