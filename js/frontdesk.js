@@ -1,5 +1,4 @@
 // js/frontdesk.js
-
 import {
   getLane,
   updateLane,
@@ -25,8 +24,9 @@ async function loadTeamsFromCsv() {
     teamsCache = teams
       .map((t, idx) => {
         return {
-          // Try common column names in order; adjust if your headers differ
-          id: t.team_id || t.id || t.TeamID || (idx + 1),
+          // These names match your teams.csv headers:
+          // team_id, league_id, team_number, team_name
+          id: t.team_id || t.id || t.TeamID || String(idx + 1),
           name: t.team_name || t.name || t.TeamName,
           league: t.league_name || t.league || t.LeagueName || ''
         };
@@ -77,8 +77,11 @@ function buildTeamOptions(selectedId) {
   let html = '<option value="">-- None --</option>';
   teamsCache.forEach(t => {
     const label = t.league ? `${t.name} (${t.league})` : t.name;
+
+    // IMPORTANT: treat IDs as strings (no Number())
     const sel =
-      selectedId && Number(selectedId) === Number(t.id) ? ' selected' : '';
+      selectedId && String(selectedId) === String(t.id) ? ' selected' : '';
+
     html += `<option value="${t.id}"${sel}>${label}</option>`;
   });
   return html;
@@ -98,7 +101,7 @@ function renderLanes() {
     tr.dataset.laneId = laneId;
 
     const leagueOptions = buildLeagueOptions(lane.league || '');
-    const teamOptions = buildTeamOptions(lane.teamId);
+    const teamOptions = buildTeamOptions(lane.teamId || '');
 
     tr.innerHTML = `
       <td>${laneId}</td>
@@ -176,12 +179,15 @@ function attachLaneHandlers() {
     teamSelect.onchange = e => {
       e.stopPropagation();
       const val = teamSelect.value;
-      const teamId = val ? Number(val) : null;
+      // IMPORTANT: keep as string (e.g. "32170-01")
+      const teamId = val || null;
+
       updateLane(laneId, {
         teamId,
-        players: [], // clear cached players; state.js will rebuild from team when lane is loaded
+        players: [],          // clear cached players; state.js can rebuild from team when lane is loaded
         currentPlayerIndex: 0
       });
+
       renderLanes();
     };
 
