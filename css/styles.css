@@ -617,3 +617,44 @@ a:visited {
 .team-row .frame-score {
   color: var(--color-score-text, #f8d7c0);
 }
+/* BIG, BOLD SCORING VISIBILITY UPDATE ========================== */
+
+/* Player names */
+.scoreboard-row .player-name {
+  font-size: 1.8rem !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.5px;
+}
+
+/* Frame scores (the big numbers) */
+.scoreboard-cell .frame-score,
+.team-row .frame-score {
+  font-size: 2rem !important;     /* twice normal size */
+  font-weight: 900 !important;    /* ultra bold */
+  color: var(--color-score-text, #ffffff) !important;
+}
+
+/* Rolls — X, /, numbers inside frame */
+.scoreboard-cell .rolls-row .roll,
+.team-row .rolls-row .roll {
+  font-size: 1.6rem !important;
+  font-weight: 800 !important;
+}
+
+/* Optional: slightly more spacing in each scoring box */
+.scoreboard-cell {
+  padding-top: 8px !important;
+  padding-bottom: 8px !important;
+}
+
+/* Team row label */
+.team-row .player-name {
+  font-size: 1.8rem !important;
+  font-weight: 800 !important;
+}
+
+/* Make every scoreboard number/text crisp and high-contrast */
+.scoreboard-cell div,
+.team-row div {
+  text-shadow: 0 0 4px rgba(0,0,0,0.6);
+}
