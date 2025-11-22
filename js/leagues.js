@@ -1,8 +1,10 @@
 // js/leagues.js
 import { loadAllCsv } from './csvLoader.js';
 
+/* ------------------ Render Table ------------------ */
+
 function renderLeaguesTable(leagues) {
-  const tbody = document.querySelector('#leagues-table tbody');
+  const tbody = document.querySelector('#leagues-table-body');
   if (!tbody) return;
 
   tbody.innerHTML = '';
@@ -10,10 +12,10 @@ function renderLeaguesTable(leagues) {
   leagues.forEach(lg => {
     const tr = document.createElement('tr');
 
-    const leagueId = lg.league_id || '';
-    const name = lg.name || '';
-    const season = lg.season || '';
-    const centerId = lg.center_id || '';
+    const leagueId  = lg.league_id || '';
+    const name      = lg.name || '';
+    const season    = lg.season || '';
+    const centerId  = lg.center_id || '';
 
     tr.innerHTML = `
       <td>${leagueId}</td>
@@ -21,15 +23,15 @@ function renderLeaguesTable(leagues) {
       <td>${season}</td>
       <td>${centerId}</td>
       <td>
-        <!-- Placeholder actions so layout matches Bowlers/Teams pages -->
         <button class="btn-small" data-action="view-teams">View Teams</button>
       </td>
     `;
 
-    // Optional: wire up "View Teams" to jump to Front Desk with this league pre-selected later
     tbody.appendChild(tr);
   });
 }
+
+/* ------------------ Init ------------------ */
 
 document.addEventListener('DOMContentLoaded', async () => {
   try {
