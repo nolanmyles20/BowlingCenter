@@ -11,13 +11,17 @@ import {
 import { loadAllCsv } from './csvLoader.js';
 
 let teamsCache = [];
+let fullCsvCache = null; // NEW: cache all CSV data so we can build rosters
 
 /* ---------------- helpers ---------------- */
 
 // Load teams directly from teams.csv, NOT from localStorage
 async function loadTeamsFromCsv() {
   try {
-    const { teams } = await loadAllCsv();
+    const all = await loadAllCsv();          // NEW: keep whole object
+    fullCsvCache = all;                      // NEW: cache it globally
+
+    const teams = all.teams || [];
 
     // Map CSV rows into the shape the UI expects:
     // { id, name, league }
@@ -85,6 +89,144 @@ function buildTeamOptions(selectedId) {
     html += `<option value="${t.id}"${sel}>${label}</option>`;
   });
   return html;
+}
+
+/* ---------------- helpers: build lane players from CSV ---------------- */
+
+// NEW: Build the lane.players array for a given lane + teamId from CSV
+async function buildPlayersForLaneFromCsv(laneId, teamId) {
+  try {
+    if (!teamId) {
+      // No team selected → clear players
+      updateLane(laneId, {
+        teamId: null,
+        players: [],
+        currentPlayerIndex: 0
+      });
+      return;
+    }
+
+    // Ensure we have CSV data cached
+    if (!fullCsvCache) {
+      fullCsvCache = await loadAllCsv();
+    }
+
+    const {
+      teams = [],
+      bowlers = []
+    } = fullCsvCache;
+
+    const rosterRowsRaw =
+      fullCsvCache.team_roster ||
+      fullCsvCache.teamRosters ||
+      fullCsvCache.rosters ||
+      [];
+
+    // Find metadata for this team (to get league_id + team_number)
+    const teamMeta =
+      teams.find(
+        t =>
+          String(t.team_id || t.id || t.TeamID) === String(teamId)
+      ) || null;
+
+    let rosterRows = rosterRowsRaw;
+
+    if (teamMeta) {
+      const leagueId =
+        teamMeta.league_id ||
+        teamMeta.leagueId ||
+        teamMeta.league_id_fk ||
+        teamMeta.league;
+      const teamNumber =
+        teamMeta.team_number ||
+        teamMeta.teamNumber ||
+        teamMeta.number;
+
+      if (leagueId && teamNumber != null) {
+        rosterRows = rosterRowsRaw.filter(r =>
+          String(r.league_id) === String(leagueId) &&
+          String(r.team_number) === String(teamNumber)
+        );
+      }
+    }
+
+    // Fallback: match by team_name if needed
+    if (teamMeta && (!rosterRows || rosterRows.length === 0)) {
+      const tn = (teamMeta.team_name || teamMeta.teamName || '').trim().toLowerCase();
+      rosterRows = rosterRowsRaw.filter(r =>
+        (r.team_name || '').trim().toLowerCase() === tn
+      );
+    }
+
+    // Sort roster by position so lane order matches the lineup
+    const sortedRoster = (rosterRows || []).slice().sort((a, b) => {
+      const pa = Number(a.position || a.pos_number || a.pos || 0);
+      const pb = Number(b.position || b.pos_number || b.pos || 0);
+      return pa - pb;
+    });
+
+    // Map roster rows to lane "players" with handicap from bowlers.csv
+    const players = sortedRoster.map(r => {
+      const bowlerIdStr = String(r.bowler_id || r.bowlerId || r.BowlerID || '');
+      const bowler =
+        bowlers.find(
+          b => String(b.bowler_id || b.id || b.BowlerID) === bowlerIdStr
+        ) || {};
+
+      const first =
+        bowler.first_name ||
+        bowler.FirstName ||
+        r.first_name ||
+        r.FirstName ||
+        '';
+      const last =
+        bowler.last_name ||
+        bowler.LastName ||
+        r.last_name ||
+        r.LastName ||
+        '';
+      const name = `${first} ${last}`.trim() || 'Bowler';
+
+      const hcpRaw =
+        r.hcp ??
+        r.handicap ??
+        bowler.hcp ??
+        bowler.handicap ??
+        bowler.Hcp ??
+        0;
+      const handicap = Number(hcpRaw) || 0;
+
+      return {
+        bowlerId: bowlerIdStr || null,
+        name,
+        handicap,
+        absent: false,
+        games: [
+          { rolls: [] },
+          { rolls: [] },
+          { rolls: [] }
+        ]
+      };
+    });
+
+    console.log(
+      `Lane ${laneId} team ${teamId}: built ${players.length} players from CSV roster`
+    );
+
+    updateLane(laneId, {
+      teamId,
+      players,
+      currentPlayerIndex: 0
+    });
+  } catch (err) {
+    console.error('Failed to build lane players from CSV roster:', err);
+    // Fallback: still at least save the teamId and clear players
+    updateLane(laneId, {
+      teamId,
+      players: [],
+      currentPlayerIndex: 0
+    });
+  }
 }
 
 /* ---------------- render ---------------- */
@@ -176,18 +318,16 @@ function attachLaneHandlers() {
     };
 
     // Team change → assigns roster to that lane
-    teamSelect.onchange = e => {
+    teamSelect.onchange = async e => {
       e.stopPropagation();
       const val = teamSelect.value;
       // IMPORTANT: keep as string (e.g. "32170-01")
       const teamId = val || null;
 
-      updateLane(laneId, {
-        teamId,
-        players: [],          // clear cached players; state.js can rebuild from team when lane is loaded
-        currentPlayerIndex: 0
-      });
+      // NEW: build players from CSV roster + bowler stats
+      await buildPlayersForLaneFromCsv(laneId, teamId);
 
+      // Re-render so the dropdown shows the updated selection
       renderLanes();
     };
 
