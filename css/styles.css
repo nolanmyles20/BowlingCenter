@@ -689,3 +689,16 @@ a:visited {
   color: var(--color-highlight, #f97316) !important;
   animation: arrowPulse 0.8s infinite;  /* same as arrows */
 }
+/* First name above last name, no splitting inside names */
+.scoreboard-row .player-name {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;      /* left-align inside label cell */
+  line-height: 1.1;
+}
+
+.scoreboard-row .player-name .player-first,
+.scoreboard-row .player-name .player-last {
+  white-space: nowrap;          /* don't break inside a name */
+  max-width: 100%;
+}
