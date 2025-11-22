@@ -19,7 +19,14 @@
     </nav>
   </header>
 
-  <main class="lane-main">
+  <!-- Rotate-to-landscape overlay -->
+  <div id="rotate-overlay">
+    <div class="rotate-message">
+      🔁 Please rotate your device to landscape to use the Lane screen.
+    </div>
+  </div>
+
+  <main class="lane-main lane-content">
     <section class="panel lane-info-panel">
       <div id="lane-info"></div>
       <div class="game-switcher">
@@ -44,7 +51,6 @@
         <img id="bowling-popup-img" src="" alt="Bowling event" />
       </div>
 
-      
       <div id="scoreboard" class="scoreboard"></div>
     </section>
 
@@ -132,7 +138,6 @@
 
           <label for="theme-score-text">Text</label>
           <input type="color" id="theme-score-text" />
-          
         </div>
       </div>
 
